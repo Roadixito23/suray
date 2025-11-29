@@ -1,0 +1,40 @@
+name: surayweb
+description: "Pagina Web Suray"
+publish_to: 'Suray'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  firebase_core: ^2.13.0
+  cloud_firestore: ^4.9.0
+  http: ^1.1.0
+  intl: ^0.19.0
+  universal_html: ^2.2.4  # Para compatibilidad web/móvil
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+    - assets/logo.png
+    - assets/ruta_240.png
+    - assets/home_panels/aysen.png
+    - assets/home_panels/tunel.png
+    - assets/home_panels/buses.png
+    - assets/home_panels/terminal_coy.png
+    - assets/home_panels/puente_aysen.png
+    - assets/bg/background_route.png
+  fonts:
+    - family: Hemiheads
+      fonts:
+        - asset: assets/fonts/Hemiheads.otf

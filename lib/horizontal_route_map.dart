@@ -358,9 +358,15 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
   Widget _buildHorizontalRoute(bool isMobile) {
     if (_stations.isEmpty) return const SizedBox.shrink();
 
-    // Calcular el ancho total basado en el número de estaciones
-    final double stationSpacing = isMobile ? 140.0 : 180.0;
-    final double totalWidth = (_stations.length - 1) * stationSpacing + 120;
+    // Calcular el rango de KM (desde el mínimo al máximo)
+    final int minKm = _stations.first.km;
+    final int maxKm = _stations.last.km;
+    final int kmRange = maxKm - minKm;
+
+    // Calcular ancho total basado en el rango de KM (más espacio para mayor legibilidad)
+    // Usamos un factor de escala para que haya suficiente espacio entre estaciones
+    final double kmToPixels = isMobile ? 12.0 : 16.0;
+    final double totalWidth = kmRange * kmToPixels + 120;
 
     return SizedBox(
       width: totalWidth,
@@ -459,10 +465,11 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
             },
           ),
 
-          // Estaciones con animación de entrada
+          // Estaciones con animación de entrada - posicionadas según KM reales
           ...List.generate(_stations.length, (index) {
             final station = _stations[index];
-            final xPosition = index * stationSpacing;
+            // Calcular posición basada en el KM real de la estación
+            final double xPosition = (station.km - minKm) * kmToPixels;
             return AnimatedBuilder(
               animation: _stationsController,
               builder: (context, child) {

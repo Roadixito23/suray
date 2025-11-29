@@ -87,7 +87,7 @@ class _SchedulesPageState extends State<SchedulesPage> {
         .map((snapshot) => snapshot.docs.map((doc) => doc.data()['time'] as String).toList());
   }
 
-  // --- NUEVA LÓGICA PARA DESCARGAR LA IMAGEN (SIN OFFSTAGE) ---
+  // --- NUEVA LÓGICA PARA DESCARGAR LA IMAGEN (MEJORADA) ---
   Future<void> _downloadSchedules() async {
     setState(() {
       _isLoadingImage = true;
@@ -107,7 +107,7 @@ class _SchedulesPageState extends State<SchedulesPage> {
         coyhaiqueSchedules: _cachedCoyhaiqueSchedules!,
       ).buildScheduleImage();
 
-      // 3. Renderizar el widget a imagen usando un método alternativo
+      // 3. Renderizar el widget a imagen usando método mejorado
       final pngBytes = await _renderWidgetToImage(scheduleWidget);
 
       // 4. Descargar según la plataforma
@@ -133,14 +133,24 @@ class _SchedulesPageState extends State<SchedulesPage> {
         );
       }
 
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('Error generando imagen: $e');
+      print('StackTrace completo: $stackTrace');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al generar imagen: $e'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Error al generar imagen',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text('$e', style: const TextStyle(fontSize: 12)),
+              ],
+            ),
             backgroundColor: MyApp.errorColor,
-            duration: const Duration(seconds: 4),
+            duration: const Duration(seconds: 6),
           ),
         );
       }
@@ -153,95 +163,171 @@ class _SchedulesPageState extends State<SchedulesPage> {
     }
   }
 
-  // --- MÉTODO PARA RENDERIZAR WIDGET A IMAGEN ---
+  // --- MÉTODO PARA RENDERIZAR WIDGET A IMAGEN (MEJORADO Y ROBUSTO) ---
   Future<Uint8List> _renderWidgetToImage(Widget widget) async {
-    // Crear un GlobalKey para el RepaintBoundary
-    final globalKey = GlobalKey();
-    
-    // Crear un widget temporal que muestre nuestro contenido
-    final widgetToRender = RepaintBoundary(
-      key: globalKey,
-      child: MediaQuery(
-        data: const MediaQueryData(
-          size: Size(1200, 800), // Cambiado a horizontal: ancho > alto
-          devicePixelRatio: 2.0,
-        ),
-        child: Directionality(
-          textDirection: TextDirection.ltr,
-          child: Material(
-            child: Container(
-              width: 1200, // Ancho mayor para formato horizontal
-              height: 800,  // Alto menor para formato horizontal
-              color: Colors.white,
-              child: widget,
+    final GlobalKey globalKey = GlobalKey();
+    OverlayEntry? overlayEntry;
+
+    try {
+      print('Iniciando renderizado de widget a imagen...');
+
+      // Crear un widget temporal que muestre nuestro contenido
+      final widgetToRender = RepaintBoundary(
+        key: globalKey,
+        child: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(1200, 800),
+            devicePixelRatio: 2.0,
+          ),
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                width: 1200,
+                height: 800,
+                color: Colors.white,
+                child: widget,
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    // Mostrar el widget en un overlay temporal
-    late OverlayEntry overlayEntry;
-    final completer = Completer<Uint8List>();
+      final completer = Completer<Uint8List>();
 
-    overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        left: -2000, // Fuera de pantalla
-        top: -2000,
-        child: widgetToRender,
-      ),
-    );
-
-    // Agregar el overlay
-    Overlay.of(context).insert(overlayEntry);
-
-    // Esperar a que se renderice
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      try {
-        // Pequeña pausa para asegurar renderizado completo
-        await Future.delayed(const Duration(milliseconds: 500));
-        
-        final boundary = globalKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-        if (boundary == null) {
-          throw Exception('No se pudo obtener el boundary para renderizar');
-        }
-
-        // Verificar que no necesite repintado
-        if (boundary.debugNeedsPaint) {
-          await Future.delayed(const Duration(milliseconds: 300));
-        }
-
-        final image = await boundary.toImage(pixelRatio: 2.0);
-        final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-        
-        if (byteData == null) {
-          throw Exception('No se pudo convertir la imagen a bytes');
-        }
-
-        completer.complete(byteData.buffer.asUint8List());
-      } catch (e) {
-        completer.completeError(e);
-      } finally {
-        // Remover el overlay
-        overlayEntry.remove();
+      // Verificar que el contexto y overlay estén disponibles
+      if (!mounted) {
+        throw Exception('Widget no está montado');
       }
-    });
 
-    return completer.future;
+      print('Buscando overlay...');
+      final overlay = Overlay.of(context, rootOverlay: true);
+
+      overlayEntry = OverlayEntry(
+        builder: (context) => Positioned(
+          left: -5000,
+          top: -5000,
+          child: widgetToRender,
+        ),
+      );
+
+      print('Insertando overlay...');
+      overlay.insert(overlayEntry);
+
+      // Esperar múltiples frames para asegurar renderizado completo
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      print('Esperando post-frame callback...');
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        try {
+          print('Dentro del post-frame callback, esperando renderizado...');
+
+          // Esperar renderizado completo con más tiempo
+          await Future.delayed(const Duration(milliseconds: 1000));
+
+          print('Buscando RenderObject...');
+          final RenderObject? renderObject = globalKey.currentContext?.findRenderObject();
+
+          if (renderObject == null) {
+            throw Exception('No se pudo encontrar el RenderObject - el widget no se renderizó correctamente');
+          }
+
+          if (renderObject is! RenderRepaintBoundary) {
+            throw Exception('El RenderObject no es un RepaintBoundary (es ${renderObject.runtimeType})');
+          }
+
+          final boundary = renderObject;
+          print('RepaintBoundary encontrado correctamente');
+
+          // Intentar múltiples veces si necesita repintado
+          int attempts = 0;
+          while (boundary.debugNeedsPaint && attempts < 10) {
+            print('Esperando repintado (intento ${attempts + 1})...');
+            await Future.delayed(const Duration(milliseconds: 300));
+            attempts++;
+          }
+
+          if (boundary.debugNeedsPaint) {
+            print('Advertencia: El boundary aún necesita repintado después de 10 intentos');
+          }
+
+          print('Capturando imagen...');
+          final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
+          print('Imagen capturada: ${image.width}x${image.height}');
+
+          print('Convirtiendo a bytes...');
+          final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+
+          if (byteData == null) {
+            throw Exception('No se pudo convertir la imagen a bytes - toByteData retornó null');
+          }
+
+          print('Imagen convertida exitosamente: ${byteData.lengthInBytes} bytes');
+
+          if (!completer.isCompleted) {
+            completer.complete(byteData.buffer.asUint8List());
+          }
+        } catch (e, stackTrace) {
+          print('ERROR en callback de renderizado: $e');
+          print('StackTrace del callback: $stackTrace');
+          if (!completer.isCompleted) {
+            completer.completeError(e, stackTrace);
+          }
+        }
+      });
+
+      print('Esperando resultado del completer...');
+      // Timeout de 20 segundos para producción
+      final result = await completer.future.timeout(
+        const Duration(seconds: 20),
+        onTimeout: () {
+          throw TimeoutException('Timeout al generar la imagen después de 20 segundos');
+        },
+      );
+
+      print('Imagen generada exitosamente');
+      return result;
+
+    } catch (e, stackTrace) {
+      print('ERROR GENERAL en _renderWidgetToImage: $e');
+      print('StackTrace completo: $stackTrace');
+      rethrow;
+    } finally {
+      // Asegurar limpieza del overlay
+      if (overlayEntry != null) {
+        try {
+          print('Removiendo overlay...');
+          overlayEntry.remove();
+          overlayEntry = null;
+        } catch (e) {
+          print('Error al remover overlay: $e');
+        }
+      }
+    }
   }
 
   // --- DESCARGA PARA WEB ---
   void _downloadForWeb(Uint8List pngBytes) {
-    // Formatear fecha como ddmmaa
-    final now = DateTime.now();
-    final formattedDate = '${now.day.toString().padLeft(2, '0')}${now.month.toString().padLeft(2, '0')}${now.year.toString().substring(2)}';
-    
-    final blob = html.Blob([pngBytes]);
-    final url = html.Url.createObjectUrlFromBlob(blob);
-    final anchor = html.AnchorElement(href: url)
-      ..setAttribute('download', 'Horarios Buses Suray ($formattedDate).png')
-      ..click();
-    html.Url.revokeObjectUrl(url);
+    try {
+      print('Iniciando descarga web...');
+
+      // Formatear fecha como ddmmaa
+      final now = DateTime.now();
+      final formattedDate = '${now.day.toString().padLeft(2, '0')}${now.month.toString().padLeft(2, '0')}${now.year.toString().substring(2)}';
+
+      final blob = html.Blob([pngBytes]);
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', 'Horarios Buses Suray ($formattedDate).png')
+        ..click();
+      html.Url.revokeObjectUrl(url);
+
+      print('Descarga web completada');
+    } catch (e) {
+      print('Error en descarga web: $e');
+      rethrow;
+    }
   }
 
   // --- DESCARGA PARA MÓVILES ---
@@ -336,13 +422,13 @@ class _SchedulesPageState extends State<SchedulesPage> {
                   onPressed: _isLoadingImage ? null : _downloadSchedules,
                   icon: _isLoadingImage
                       ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
                       : const Icon(Icons.download_rounded),
                   label: Text(_isLoadingImage ? 'Generando imagen...' : 'Descargar Horarios'),
                   style: ElevatedButton.styleFrom(
@@ -483,23 +569,23 @@ class _SchedulesPageState extends State<SchedulesPage> {
             padding: const EdgeInsets.all(20.0),
             child: isDesktop
                 ? Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: scheduleWidgets[0]),
-                      const SizedBox(width: 20),
-                      Expanded(child: scheduleWidgets[1]),
-                      const SizedBox(width: 20),
-                      Expanded(child: scheduleWidgets[2]),
-                    ],
-                  )
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: scheduleWidgets[0]),
+                const SizedBox(width: 20),
+                Expanded(child: scheduleWidgets[1]),
+                const SizedBox(width: 20),
+                Expanded(child: scheduleWidgets[2]),
+              ],
+            )
                 : Column(
-                    children: scheduleWidgets.map((widget) =>
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 20),
-                          child: widget,
-                        ),
-                    ).toList(),
+              children: scheduleWidgets.map((widget) =>
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: widget,
                   ),
+              ).toList(),
+            ),
           ),
         ],
       ),

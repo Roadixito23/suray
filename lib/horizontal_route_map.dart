@@ -135,8 +135,8 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
       body: _isLoading
           ? _buildLoadingState()
           : _stations.isEmpty
-              ? _buildEmptyState()
-              : _buildRouteMap(isMobile),
+          ? _buildEmptyState()
+          : _buildRouteMap(isMobile, screenSize),
     );
   }
 
@@ -204,7 +204,7 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
     );
   }
 
-  Widget _buildRouteMap(bool isMobile) {
+  Widget _buildRouteMap(bool isMobile, Size screenSize) {
     return Stack(
       children: [
         // Fondo con gradiente
@@ -395,10 +395,10 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
               ),
               child: station.isTerminal
                   ? const Icon(
-                      Icons.location_on,
-                      color: Colors.white,
-                      size: 16,
-                    )
+                Icons.location_on,
+                color: Colors.white,
+                size: 16,
+              )
                   : null,
             ),
 

@@ -276,7 +276,21 @@ class _SchedulesPageState extends State<SchedulesPage> {
 
   @override
   Widget build(BuildContext context) {
-    bool isDesktop = MediaQuery.of(context).size.width > 950;
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
+
+    // Detección mejorada de dispositivos móviles
+    final bool isMobilePortrait = screenWidth < 600;
+    final bool isTabletPortrait = screenWidth >= 600 && screenWidth < 900;
+    final bool isDesktop = screenWidth >= 900;
+
+    // Detectar orientación
+    final bool isPortrait = screenHeight > screenWidth;
+
+    // Calcular el tamaño de fuente dinámicamente para móviles
+    final double baseFontSize = isMobilePortrait ? 13.0 : 14.0;
+    final double chipPadding = isMobilePortrait ? 10.0 : 16.0;
 
     return Scaffold(
       backgroundColor: MyApp.lightGreyBackground,
@@ -379,6 +393,8 @@ class _SchedulesPageState extends State<SchedulesPage> {
                   isDesktop,
                   MyApp.primaryNavy,
                   Icons.location_city_rounded,
+                  fontSize: baseFontSize,
+                  chipPadding: chipPadding,
                 ),
                 const SizedBox(height: 24),
                 _buildSection(
@@ -387,6 +403,8 @@ class _SchedulesPageState extends State<SchedulesPage> {
                   isDesktop,
                   MyApp.accentBlue,
                   Icons.location_city_rounded,
+                  fontSize: baseFontSize,
+                  chipPadding: chipPadding,
                 ),
               ],
             ),
@@ -396,11 +414,11 @@ class _SchedulesPageState extends State<SchedulesPage> {
     );
   }
 
-  Widget _buildSection(String title, String region, bool isDesktop, Color color, IconData icon) {
+  Widget _buildSection(String title, String region, bool isDesktop, Color color, IconData icon, {double fontSize = 14.0, double chipPadding = 16.0}) {
     final scheduleWidgets = [
-      _buildScheduleTable('Lunes a Viernes', _timesStream(region, 'lunesViernes'), region, 'weekdays'),
-      _buildScheduleTable('Sábados', _timesStream(region, 'sabados'), region, 'saturday'),
-      _buildScheduleTable('Domingos y Feriados', _timesStream(region, 'domingosFeriados'), region, 'sunday_holidays'),
+      _buildScheduleTable('Lunes a Viernes', _timesStream(region, 'lunesViernes'), region, 'weekdays', fontSize: fontSize, chipPadding: chipPadding),
+      _buildScheduleTable('Sábados', _timesStream(region, 'sabados'), region, 'saturday', fontSize: fontSize, chipPadding: chipPadding),
+      _buildScheduleTable('Domingos y Feriados', _timesStream(region, 'domingosFeriados'), region, 'sunday_holidays', fontSize: fontSize, chipPadding: chipPadding),
     ];
 
     return Container(
@@ -488,7 +506,7 @@ class _SchedulesPageState extends State<SchedulesPage> {
     );
   }
 
-  Widget _buildScheduleTable(String title, Stream<List<String>> stream, String region, String tableType) {
+  Widget _buildScheduleTable(String title, Stream<List<String>> stream, String region, String tableType, {double fontSize = 14.0, double chipPadding = 16.0}) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -517,11 +535,14 @@ class _SchedulesPageState extends State<SchedulesPage> {
                 ),
               ),
               const SizedBox(width: 12),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: MyApp.primaryNavy,
-                  fontWeight: FontWeight.bold,
+              Flexible(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: MyApp.primaryNavy,
+                    fontWeight: FontWeight.bold,
+                    fontSize: fontSize + 2,
+                  ),
                 ),
               ),
             ],
@@ -551,7 +572,7 @@ class _SchedulesPageState extends State<SchedulesPage> {
                   ),
                   child: Text(
                     'Error: ${snapshot.error}',
-                    style: TextStyle(color: MyApp.errorColor),
+                    style: TextStyle(color: MyApp.errorColor, fontSize: fontSize),
                   ),
                 );
               }
@@ -563,14 +584,14 @@ class _SchedulesPageState extends State<SchedulesPage> {
                     color: MyApp.lightTextColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text('No hay horarios disponibles.'),
+                  child: Text('No hay horarios disponibles.', style: TextStyle(fontSize: fontSize)),
                 );
               }
 
               return Wrap(
-                spacing: 8.0,
-                runSpacing: 8.0,
-                children: times.map((time) => _buildTimeChip(time, region, tableType)).toList(),
+                spacing: 6.0,
+                runSpacing: 6.0,
+                children: times.map((time) => _buildTimeChip(time, region, tableType, fontSize: fontSize, chipPadding: chipPadding)).toList(),
               );
             },
           ),
@@ -586,7 +607,7 @@ class _SchedulesPageState extends State<SchedulesPage> {
     return Icons.schedule_rounded;
   }
 
-  Widget _buildTimeChip(String time, String region, String tableType) {
+  Widget _buildTimeChip(String time, String region, String tableType, {double fontSize = 14.0, double chipPadding = 16.0}) {
     String? nextDeparture = region == 'aysen' ? widget.nextAysenDeparture : widget.nextCoyhaiqueDeparture;
     final isNext = nextDeparture != null && nextDeparture.contains(time) && _shouldHighlightInThisTable(tableType, nextDeparture);
     final isTomorrow = nextDeparture?.contains('(mañana)') ?? false;
@@ -594,7 +615,7 @@ class _SchedulesPageState extends State<SchedulesPage> {
     if (isNext) {
       // Chip destacado para la próxima salida
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: chipPadding, vertical: chipPadding * 0.75),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [MyApp.primaryOrange, MyApp.deepOrange],
@@ -622,16 +643,16 @@ class _SchedulesPageState extends State<SchedulesPage> {
               child: Icon(
                 isTomorrow ? Icons.nightlight_round : Icons.directions_bus,
                 color: Colors.white,
-                size: 16,
+                size: fontSize + 2,
               ),
             ),
             const SizedBox(width: 8),
             Text(
               time,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
-                fontSize: 15,
+                fontSize: fontSize + 1,
               ),
             ),
           ],
@@ -640,7 +661,7 @@ class _SchedulesPageState extends State<SchedulesPage> {
     } else {
       // Chip normal para los demás horarios
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: chipPadding, vertical: chipPadding * 0.75),
         decoration: BoxDecoration(
           color: MyApp.surfaceWhite,
           borderRadius: BorderRadius.circular(20),
@@ -658,9 +679,10 @@ class _SchedulesPageState extends State<SchedulesPage> {
         ),
         child: Text(
           time,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          style: TextStyle(
             fontWeight: FontWeight.w600,
             color: MyApp.darkTextColor,
+            fontSize: fontSize,
           ),
         ),
       );

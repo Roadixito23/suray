@@ -3,7 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'contact_page.dart';
-import 'route_page.dart';
+import 'horizontal_route_map.dart';
 import 'schedules_page.dart';
 import 'main.dart';
 import 'dual_weather_service.dart';
@@ -319,7 +319,7 @@ class _HomePageState extends State<HomePage> {
                                     children: [
                                       _buildHeroNavButton('Contacto', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContactPage()))),
                                       const SizedBox(width: 10),
-                                      _buildHeroNavButton('Nuestra Ruta', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MetroMapRoute()))),
+                                      _buildHeroNavButton('Nuestra Ruta', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HorizontalRouteMap()))),
                                     ],
                                   ),
                                 ],
@@ -343,7 +343,7 @@ class _HomePageState extends State<HomePage> {
                                     children: [
                                       _buildHeroNavButton('Contacto', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContactPage()))),
                                       const SizedBox(width: 10),
-                                      _buildHeroNavButton('Nuestra Ruta', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MetroMapRoute()))),
+                                      _buildHeroNavButton('Nuestra Ruta', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HorizontalRouteMap()))),
                                     ],
                                   ),
                                 ],

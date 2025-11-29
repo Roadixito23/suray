@@ -28,18 +28,18 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
   void initState() {
     super.initState();
 
-    // Animación cíclica del bus (ida y vuelta más rápido)
+    // Animación cíclica del bus (ida y vuelta)
     _busAnimationController = AnimationController(
-      duration: const Duration(seconds: 5), // Más rápido que antes (era 10)
+      duration: const Duration(seconds: 6),
       vsync: this,
-    )..repeat(reverse: true); // reverse: true hace que vaya y regrese
+    )..repeat(reverse: true);
 
     _busAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
     ).animate(CurvedAnimation(
       parent: _busAnimationController,
-      curve: Curves.easeInOut, // Suavizado en los extremos
+      curve: Curves.easeInOut,
     ));
 
     // Animación de pulso para elementos
@@ -275,33 +275,27 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
           ),
         ),
 
-        // Contenedor principal centrado y expandido
+        // Contenedor principal - AHORA USA TODO EL ANCHO DISPONIBLE
         Center(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
-            padding: EdgeInsets.symmetric(
-              horizontal: isMobile ? 20 : 60,
-              vertical: isMobile ? 20 : 40,
-            ),
-            child: Container(
-              constraints: BoxConstraints(
-                minHeight: screenSize.height * 0.6,
-                maxHeight: screenSize.height * 0.75,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 24 : 48,
+                vertical: isMobile ? 16 : 24,
               ),
-              child: Center(
-                child: _buildHorizontalRoute(isMobile),
-              ),
+              child: _buildHorizontalRoute(isMobile, screenSize),
             ),
           ),
         ),
 
-        // Panel de información de la estación seleccionada con animación
+        // Panel de información de la estación seleccionada
         if (_selectedStationId != null)
           _buildStationInfoPanel(isMobile),
 
-        // Indicador de scroll mejorado para móviles
-        if (isMobile)
+        // Indicador de scroll para móviles (solo si hay scroll)
+        if (isMobile && _stations.length > 3)
           Positioned(
             top: 10,
             left: 0,
@@ -355,30 +349,57 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
     );
   }
 
-  Widget _buildHorizontalRoute(bool isMobile) {
+  Widget _buildHorizontalRoute(bool isMobile, Size screenSize) {
     if (_stations.isEmpty) return const SizedBox.shrink();
 
-    // Calcular el rango de KM (desde el mínimo al máximo)
+    // Calcular el rango de KM
     final int minKm = _stations.first.km;
     final int maxKm = _stations.last.km;
     final int kmRange = maxKm - minKm;
 
-    // Calcular ancho total basado en el rango de KM (más espacio para mayor legibilidad)
-    // Usamos un factor de escala para que haya suficiente espacio entre estaciones
-    final double kmToPixels = isMobile ? 12.0 : 16.0;
-    final double totalWidth = kmRange * kmToPixels + 120;
+    // ============================================================
+    // CÁLCULO DEL ANCHO ADAPTATIVO
+    // ============================================================
+
+    // Márgenes en los bordes (izquierdo y derecho)
+    final double edgeMargin = isMobile ? 60.0 : 100.0;
+
+    // Ancho disponible de la pantalla (menos márgenes del padding exterior)
+    final double screenAvailable = screenSize.width - (isMobile ? 48 : 96);
+
+    // Espaciado mínimo entre estaciones para evitar superposición
+    final double minSpacingPerStation = isMobile ? 140.0 : 180.0;
+
+    // Ancho mínimo necesario basado en cantidad de estaciones
+    final double minRequiredWidth = (_stations.length - 1) * minSpacingPerStation + edgeMargin * 2;
+
+    // Usar el mayor entre el ancho de pantalla y el mínimo requerido
+    final double totalWidth = math.max(screenAvailable, minRequiredWidth);
+
+    // ============================================================
+    // ALTURA DEL CONTENEDOR
+    // ============================================================
+
+    // Altura disponible para el mapa (dejando espacio para AppBar y panel info)
+    final double availableHeight = screenSize.height - (isMobile ? 180 : 200);
+    final double containerHeight = math.min(availableHeight, isMobile ? 320.0 : 400.0);
+
+    // Posición Y de la línea principal (centrada verticalmente)
+    final double lineY = containerHeight / 2;
 
     return SizedBox(
       width: totalWidth,
+      height: containerHeight,
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          // Línea principal de la ruta con efectos mejorados
+          // Línea principal de la ruta
           Positioned(
-            top: isMobile ? 120 : 140,
-            left: 0,
-            right: 0,
+            top: lineY - 3,
+            left: edgeMargin - 20,
+            right: edgeMargin - 20,
             child: CustomPaint(
-              size: Size(totalWidth, 6),
+              size: Size(totalWidth - edgeMargin * 2 + 40, 6),
               painter: EnhancedRouteLinePainter(
                 color: MyApp.primaryOrange,
                 isMobile: isMobile,
@@ -386,298 +407,375 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
             ),
           ),
 
-          // Bus animado con flechas modernas
+          // Bus animado
           AnimatedBuilder(
             animation: _busAnimation,
             builder: (context, child) {
-              final double busPosition = _busAnimation.value * (totalWidth - 120);
+              final double busTrackWidth = totalWidth - edgeMargin * 2 - 80;
+              final double busPosition = edgeMargin + _busAnimation.value * busTrackWidth;
               final bool goingRight = _busAnimationController.status == AnimationStatus.forward;
 
               return Positioned(
-                top: isMobile ? 85 : 100,
+                top: lineY - (isMobile ? 22 : 26),
                 left: busPosition,
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0.0, end: 1.0),
-                  duration: const Duration(milliseconds: 300),
-                  builder: (context, value, child) {
-                    return Transform.scale(
-                      scale: 0.95 + (math.sin(_busAnimation.value * math.pi * 2) * 0.05),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              MyApp.primaryOrange,
-                              MyApp.softOrange,
-                              MyApp.primaryOrange,
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: MyApp.primaryOrange.withOpacity(0.6),
-                              blurRadius: 20,
-                              spreadRadius: 4,
-                              offset: const Offset(0, 4),
-                            ),
-                            BoxShadow(
-                              color: MyApp.primaryOrange.withOpacity(0.3),
-                              blurRadius: 30,
-                              spreadRadius: 8,
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Flechas modernas que simulan movimiento del bus
-                            if (goingRight) ...[
-                              _buildArrowIcon(isMobile, 0.6),
-                              const SizedBox(width: 4),
-                              _buildArrowIcon(isMobile, 0.8),
-                              const SizedBox(width: 4),
-                              _buildArrowIcon(isMobile, 1.0),
-                            ] else ...[
-                              Transform.rotate(
-                                angle: math.pi,
-                                child: _buildArrowIcon(isMobile, 1.0),
-                              ),
-                              const SizedBox(width: 4),
-                              Transform.rotate(
-                                angle: math.pi,
-                                child: _buildArrowIcon(isMobile, 0.8),
-                              ),
-                              const SizedBox(width: 4),
-                              Transform.rotate(
-                                angle: math.pi,
-                                child: _buildArrowIcon(isMobile, 0.6),
-                              ),
-                            ],
-                          ],
-                        ),
+                child: Transform.scale(
+                  scale: 0.95 + (math.sin(_busAnimation.value * math.pi * 2) * 0.05),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          MyApp.primaryOrange,
+                          MyApp.softOrange,
+                          MyApp.primaryOrange,
+                        ],
                       ),
-                    );
-                  },
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: MyApp.primaryOrange.withOpacity(0.6),
+                          blurRadius: 16,
+                          spreadRadius: 2,
+                          offset: const Offset(0, 4),
+                        ),
+                        BoxShadow(
+                          color: MyApp.primaryOrange.withOpacity(0.3),
+                          blurRadius: 24,
+                          spreadRadius: 6,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (goingRight) ...[
+                          _buildArrowIcon(isMobile, 0.5),
+                          const SizedBox(width: 3),
+                          _buildArrowIcon(isMobile, 0.75),
+                          const SizedBox(width: 3),
+                          _buildArrowIcon(isMobile, 1.0),
+                        ] else ...[
+                          Transform.rotate(
+                            angle: math.pi,
+                            child: _buildArrowIcon(isMobile, 1.0),
+                          ),
+                          const SizedBox(width: 3),
+                          Transform.rotate(
+                            angle: math.pi,
+                            child: _buildArrowIcon(isMobile, 0.75),
+                          ),
+                          const SizedBox(width: 3),
+                          Transform.rotate(
+                            angle: math.pi,
+                            child: _buildArrowIcon(isMobile, 0.5),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
               );
             },
           ),
 
-          // Estaciones con animación de entrada - posicionadas según KM reales
-          ...List.generate(_stations.length, (index) {
-            final station = _stations[index];
-            // Calcular posición basada en el KM real de la estación
-            final double xPosition = (station.km - minKm) * kmToPixels;
-            return AnimatedBuilder(
-              animation: _stationsController,
-              builder: (context, child) {
-                final delay = index * 0.1;
-                final adjustedValue = (_stationsController.value - delay).clamp(0.0, 1.0);
-                final slideValue = Curves.easeOutCubic.transform(adjustedValue);
-
-                return Opacity(
-                  opacity: slideValue,
-                  child: Transform.translate(
-                    offset: Offset(0, (1 - slideValue) * 30),
-                    child: _buildStationMarker(station, xPosition, isMobile),
-                  ),
-                );
-              },
-            );
-          }),
+          // Estaciones con alternancia arriba/abajo
+          ..._buildStationMarkers(
+            isMobile: isMobile,
+            totalWidth: totalWidth,
+            edgeMargin: edgeMargin,
+            lineY: lineY,
+            kmRange: kmRange,
+            minKm: minKm,
+          ),
         ],
       ),
     );
+  }
+
+  /// Genera los marcadores de estaciones con posición alternada (arriba/abajo)
+  List<Widget> _buildStationMarkers({
+    required bool isMobile,
+    required double totalWidth,
+    required double edgeMargin,
+    required double lineY,
+    required int kmRange,
+    required int minKm,
+  }) {
+    final double availableWidth = totalWidth - (edgeMargin * 2);
+
+    return List.generate(_stations.length, (index) {
+      final station = _stations[index];
+
+      // Calcular posición X
+      final double xPosition;
+      if (_stations.length == 1) {
+        xPosition = totalWidth / 2;
+      } else if (kmRange > 0) {
+        final double proportion = (station.km - minKm) / kmRange;
+        xPosition = edgeMargin + (proportion * availableWidth);
+      } else {
+        xPosition = edgeMargin + (index / (_stations.length - 1)) * availableWidth;
+      }
+
+      // ============================================================
+      // ALTERNANCIA: estaciones pares arriba, impares abajo
+      // ============================================================
+      final bool isAbove = index % 2 == 0;
+
+      return Positioned(
+        left: xPosition - (isMobile ? 60 : 80),
+        top: 0,
+        bottom: 0,
+        child: AnimatedBuilder(
+          animation: _stationsController,
+          builder: (context, child) {
+            final delay = index * 0.08;
+            final adjustedValue = (_stationsController.value - delay).clamp(0.0, 1.0);
+            final slideValue = Curves.easeOutCubic.transform(adjustedValue);
+
+            return Opacity(
+              opacity: slideValue,
+              child: Transform.translate(
+                offset: Offset(0, (1 - slideValue) * (isAbove ? -20 : 20)),
+                child: _buildStationContent(
+                  station: station,
+                  isMobile: isMobile,
+                  lineY: lineY,
+                  isAbove: isAbove,
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    });
   }
 
   Widget _buildArrowIcon(bool isMobile, double opacity) {
     return Icon(
       Icons.arrow_forward_ios_rounded,
       color: Colors.white.withOpacity(opacity),
-      size: isMobile ? 16 : 20,
+      size: isMobile ? 14 : 18,
     );
   }
 
-  Widget _buildStationMarker(RouteStation station, double xPosition, bool isMobile) {
+  /// Construye el contenido visual de una estación (alternando arriba/abajo)
+  Widget _buildStationContent({
+    required RouteStation station,
+    required bool isMobile,
+    required double lineY,
+    required bool isAbove,
+  }) {
     final bool isSelected = _selectedStationId == station.id;
     final double markerSize = station.isTerminal
-        ? (isMobile ? 28.0 : 36.0)
-        : (isMobile ? 20.0 : 26.0);
+        ? (isMobile ? 30.0 : 38.0)
+        : (isMobile ? 22.0 : 28.0);
 
-    return Positioned(
-      left: xPosition,
-      top: 0,
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedStationId = isSelected ? null : station.id;
-          });
-        },
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+    final double connectorHeight = isMobile ? 30.0 : 40.0;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedStationId = isSelected ? null : station.id;
+        });
+      },
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: SizedBox(
+          width: isMobile ? 120 : 160,
+          child: Stack(
             children: [
-              // Nombre de la estación con efecto mejorado
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: isSelected ? 1.0 : 0.0),
-                duration: const Duration(milliseconds: 300),
-                builder: (context, value, child) {
-                  return Container(
-                    constraints: BoxConstraints(maxWidth: isMobile ? 110 : 150),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 8 + (value * 4),
-                      vertical: 4 + (value * 2),
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? MyApp.primaryOrange.withOpacity(0.2 + (value * 0.3))
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                      border: isSelected
-                          ? Border.all(
-                              color: MyApp.primaryOrange.withOpacity(value),
-                              width: 1,
-                            )
-                          : null,
-                    ),
-                    child: Text(
-                      station.name,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: (isMobile ? 11 : 13) + (value * 2),
-                        fontWeight: station.isTerminal
-                            ? FontWeight.bold
-                            : (isSelected ? FontWeight.w600 : FontWeight.w500),
-                        shadows: [
-                          Shadow(
-                            color: Colors.black.withOpacity(0.3),
-                            blurRadius: 4,
+              // ============================================================
+              // MARCADOR CIRCULAR (siempre en la línea)
+              // ============================================================
+              Positioned(
+                left: (isMobile ? 120 : 160) / 2 - markerSize / 2,
+                top: lineY - markerSize / 2,
+                child: AnimatedBuilder(
+                  animation: isSelected ? _pulseAnimation : const AlwaysStoppedAnimation(1.0),
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: isSelected ? _pulseAnimation.value : 1.0,
+                      child: Container(
+                        width: markerSize,
+                        height: markerSize,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: station.isTerminal || isSelected
+                              ? LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              MyApp.primaryOrange,
+                              MyApp.softOrange,
+                            ],
+                          )
+                              : null,
+                          color: !station.isTerminal && !isSelected
+                              ? Colors.white
+                              : null,
+                          border: Border.all(
+                            color: MyApp.primaryOrange,
+                            width: isSelected ? 3.5 : 2.5,
                           ),
-                        ],
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-
-              // Marcador de la estación con animación de pulso
-              AnimatedBuilder(
-                animation: isSelected ? _pulseAnimation : const AlwaysStoppedAnimation(1.0),
-                builder: (context, child) {
-                  final scale = isSelected ? _pulseAnimation.value : 1.0;
-                  return Transform.scale(
-                    scale: scale,
-                    child: Container(
-                      width: markerSize,
-                      height: markerSize,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: station.isTerminal || isSelected
-                            ? LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  MyApp.primaryOrange,
-                                  MyApp.softOrange,
-                                ],
-                              )
-                            : null,
-                        color: !station.isTerminal && !isSelected
-                            ? Colors.white
-                            : null,
-                        border: Border.all(
-                          color: MyApp.primaryOrange,
-                          width: isSelected ? 3.5 : 2.5,
+                          boxShadow: [
+                            BoxShadow(
+                              color: (station.isTerminal || isSelected
+                                  ? MyApp.primaryOrange
+                                  : Colors.white).withOpacity(0.5),
+                              blurRadius: isSelected ? 16 : 8,
+                              spreadRadius: isSelected ? 3 : 1,
+                            ),
+                          ],
                         ),
+                        child: station.isTerminal
+                            ? Icon(
+                          Icons.location_on,
+                          color: Colors.white,
+                          size: markerSize * 0.55,
+                        )
+                            : (isSelected
+                            ? Icon(
+                          Icons.circle,
+                          color: Colors.white,
+                          size: markerSize * 0.35,
+                        )
+                            : null),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              // ============================================================
+              // LÍNEA CONECTORA VERTICAL
+              // ============================================================
+              Positioned(
+                left: (isMobile ? 120 : 160) / 2 - 1.5,
+                top: isAbove
+                    ? lineY - markerSize / 2 - connectorHeight
+                    : lineY + markerSize / 2,
+                child: Container(
+                  width: 3,
+                  height: connectorHeight,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: isAbove ? Alignment.topCenter : Alignment.bottomCenter,
+                      end: isAbove ? Alignment.bottomCenter : Alignment.topCenter,
+                      colors: [
+                        MyApp.primaryOrange.withOpacity(0.3),
+                        MyApp.primaryOrange.withOpacity(0.8),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+
+              // ============================================================
+              // CONTENEDOR DE NOMBRE + KM (arriba o abajo según alternancia)
+              // ============================================================
+              Positioned(
+                left: 0,
+                right: 0,
+                top: isAbove ? 0 : null,
+                bottom: isAbove ? null : 0,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!isAbove) ...[
+                      SizedBox(height: lineY + markerSize / 2 + connectorHeight + 8),
+                    ],
+
+                    // Nombre de la estación
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: isSelected ? 1.0 : 0.0),
+                      duration: const Duration(milliseconds: 300),
+                      builder: (context, value, child) {
+                        return Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 10 + (value * 4),
+                            vertical: 6 + (value * 2),
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? MyApp.primaryOrange.withOpacity(0.15 + (value * 0.2))
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                            border: isSelected
+                                ? Border.all(
+                              color: MyApp.primaryOrange.withOpacity(0.5 + value * 0.3),
+                              width: 1.5,
+                            )
+                                : null,
+                          ),
+                          child: Text(
+                            station.name,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: (isMobile ? 12 : 14) + (value * 2),
+                              fontWeight: station.isTerminal
+                                  ? FontWeight.bold
+                                  : (isSelected ? FontWeight.w600 : FontWeight.w500),
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black.withOpacity(0.4),
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    // Badge de KM
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isMobile ? 10 : 12,
+                        vertical: isMobile ? 5 : 6,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            MyApp.primaryOrange,
+                            MyApp.softOrange,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: (isSelected ? MyApp.primaryOrange : Colors.white)
-                                .withOpacity(0.6),
-                            blurRadius: isSelected ? 16 : 8,
-                            spreadRadius: isSelected ? 4 : 2,
+                            color: MyApp.primaryOrange.withOpacity(0.4),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
                           ),
-                          if (isSelected)
-                            BoxShadow(
-                              color: MyApp.primaryOrange.withOpacity(0.3),
-                              blurRadius: 25,
-                              spreadRadius: 6,
-                            ),
                         ],
                       ),
-                      child: station.isTerminal
-                          ? Icon(
-                              Icons.location_on,
-                              color: Colors.white,
-                              size: isMobile ? 16 : 20,
-                            )
-                          : (isSelected
-                              ? Icon(
-                                  Icons.circle,
-                                  color: Colors.white,
-                                  size: isMobile ? 8 : 10,
-                                )
-                              : null),
+                      child: Text(
+                        'KM ${station.km}',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: isMobile ? 10 : 12,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
                     ),
-                  );
-                },
-              ),
 
-              // Línea vertical conectora con gradiente
-              Container(
-                width: 3,
-                height: isMobile ? 35 : 45,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      MyApp.primaryOrange.withOpacity(0.8),
-                      MyApp.primaryOrange.withOpacity(0.3),
+                    if (isAbove) ...[
+                      SizedBox(height: lineY - markerSize / 2 - connectorHeight -
+                          (isMobile ? 70 : 85)),
                     ],
-                  ),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-
-              // KM marker con efecto mejorado
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isMobile ? 8 : 10,
-                  vertical: isMobile ? 5 : 7,
-                ),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      MyApp.primaryOrange,
-                      MyApp.softOrange,
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: MyApp.primaryOrange.withOpacity(0.4),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
                   ],
-                ),
-                child: Text(
-                  'KM ${station.km}',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: isMobile ? 11 : 13,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
                 ),
               ),
             ],
@@ -688,12 +786,15 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
   }
 
   Widget _buildStationInfoPanel(bool isMobile) {
-    final station = _stations.firstWhere((s) => s.id == _selectedStationId);
+    final station = _stations.firstWhere(
+          (s) => s.id == _selectedStationId,
+      orElse: () => _stations.first,
+    );
 
     return Positioned(
       bottom: 20,
-      left: isMobile ? 10 : 20,
-      right: isMobile ? 10 : 20,
+      left: isMobile ? 16 : 40,
+      right: isMobile ? 16 : 40,
       child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0.0, end: 1.0),
         duration: const Duration(milliseconds: 400),
@@ -704,7 +805,7 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
             child: Opacity(
               opacity: value,
               child: Container(
-                padding: EdgeInsets.all(isMobile ? 18 : 24),
+                padding: EdgeInsets.all(isMobile ? 16 : 20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
@@ -714,18 +815,18 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
                       Colors.white.withOpacity(0.95),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.15),
-                      blurRadius: 30,
-                      spreadRadius: 5,
-                      offset: const Offset(0, 10),
+                      blurRadius: 25,
+                      spreadRadius: 3,
+                      offset: const Offset(0, 8),
                     ),
                     BoxShadow(
                       color: MyApp.primaryOrange.withOpacity(0.1),
-                      blurRadius: 20,
-                      spreadRadius: 2,
+                      blurRadius: 15,
+                      spreadRadius: 1,
                     ),
                   ],
                 ),
@@ -736,7 +837,7 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
@@ -744,21 +845,21 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
                                 MyApp.softOrange,
                               ],
                             ),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
                                 color: MyApp.primaryOrange.withOpacity(0.3),
-                                blurRadius: 8,
+                                blurRadius: 6,
                                 offset: const Offset(0, 2),
                               ),
                             ],
                           ),
                           child: Text(
-                            'Km ${station.km}',
+                            'KM ${station.km}',
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
-                              fontSize: 15,
+                              fontSize: 14,
                             ),
                           ),
                         ),
@@ -767,7 +868,7 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
                           child: Text(
                             station.fullName,
                             style: TextStyle(
-                              fontSize: isMobile ? 17 : 20,
+                              fontSize: isMobile ? 16 : 18,
                               fontWeight: FontWeight.bold,
                               color: MyApp.primaryNavy,
                             ),
@@ -779,20 +880,21 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
                             shape: BoxShape.circle,
                           ),
                           child: IconButton(
-                            icon: const Icon(Icons.close, color: MyApp.primaryNavy),
+                            icon: const Icon(Icons.close, color: MyApp.primaryNavy, size: 20),
                             onPressed: () => setState(() => _selectedStationId = null),
-                            padding: EdgeInsets.zero,
+                            padding: const EdgeInsets.all(8),
+                            constraints: const BoxConstraints(),
                           ),
                         ),
                       ],
                     ),
                     if (station.isTerminal) ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: MyApp.primaryOrange.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                           border: Border.all(
                             color: MyApp.primaryOrange.withOpacity(0.3),
                             width: 1,
@@ -804,14 +906,14 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
                             Icon(
                               Icons.location_on,
                               color: MyApp.primaryOrange,
-                              size: isMobile ? 18 : 20,
+                              size: isMobile ? 16 : 18,
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             Text(
                               'Terminal Principal',
                               style: TextStyle(
                                 color: MyApp.primaryNavy,
-                                fontSize: isMobile ? 14 : 15,
+                                fontSize: isMobile ? 13 : 14,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -992,7 +1094,7 @@ class RouteStation {
   });
 }
 
-/// Painter mejorado para dibujar la línea de la ruta con efectos avanzados
+/// Painter mejorado para dibujar la línea de la ruta
 class EnhancedRouteLinePainter extends CustomPainter {
   final Color color;
   final bool isMobile;
@@ -1007,62 +1109,49 @@ class EnhancedRouteLinePainter extends CustomPainter {
     final paint = Paint()
       ..shader = LinearGradient(
         colors: [
-          color.withOpacity(0.6),
+          color.withOpacity(0.4),
           color,
           color,
-          color.withOpacity(0.6),
+          color.withOpacity(0.4),
         ],
-        stops: const [0.0, 0.2, 0.8, 1.0],
+        stops: const [0.0, 0.15, 0.85, 1.0],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
-      ..strokeWidth = isMobile ? 4 : 5
+      ..strokeWidth = isMobile ? 5 : 6
       ..strokeCap = StrokeCap.round;
 
-    // Dibujar línea principal con gradiente
+    // Línea principal
     canvas.drawLine(
       Offset(0, size.height / 2),
       Offset(size.width, size.height / 2),
       paint,
     );
 
-    // Dibujar línea decorativa superior con efecto de brillo
+    // Línea decorativa superior
     final decorativePaint = Paint()
       ..shader = LinearGradient(
         colors: [
           color.withOpacity(0.0),
-          color.withOpacity(0.4),
-          color.withOpacity(0.4),
+          color.withOpacity(0.35),
+          color.withOpacity(0.35),
           color.withOpacity(0.0),
         ],
-        stops: const [0.0, 0.2, 0.8, 1.0],
+        stops: const [0.0, 0.15, 0.85, 1.0],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
       ..strokeWidth = isMobile ? 1.5 : 2
       ..strokeCap = StrokeCap.round;
 
     canvas.drawLine(
-      Offset(0, size.height / 2 - 10),
-      Offset(size.width, size.height / 2 - 10),
+      Offset(0, size.height / 2 - 12),
+      Offset(size.width, size.height / 2 - 12),
       decorativePaint,
     );
 
-    // Dibujar línea decorativa inferior
+    // Línea decorativa inferior
     canvas.drawLine(
-      Offset(0, size.height / 2 + 10),
-      Offset(size.width, size.height / 2 + 10),
+      Offset(0, size.height / 2 + 12),
+      Offset(size.width, size.height / 2 + 12),
       decorativePaint,
     );
-
-    // Añadir puntos decorativos a lo largo de la línea
-    final dotPaint = Paint()
-      ..color = color.withOpacity(0.3)
-      ..style = PaintingStyle.fill;
-
-    for (double i = 0; i < size.width; i += 50) {
-      canvas.drawCircle(
-        Offset(i, size.height / 2),
-        isMobile ? 2 : 2.5,
-        dotPaint,
-      );
-    }
   }
 
   @override
@@ -1078,7 +1167,6 @@ class BackgroundPatternPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 
-    // Dibujar patrón de cuadrícula sutil
     for (double i = 0; i < size.width; i += 50) {
       canvas.drawLine(
         Offset(i, 0),
@@ -1095,16 +1183,15 @@ class BackgroundPatternPainter extends CustomPainter {
       );
     }
 
-    // Añadir círculos decorativos aleatorios
     final circlePaint = Paint()
       ..color = Colors.white.withOpacity(0.03)
       ..style = PaintingStyle.fill;
 
-    final random = math.Random(42); // Seed fijo para consistencia
-    for (int i = 0; i < 20; i++) {
+    final random = math.Random(42);
+    for (int i = 0; i < 15; i++) {
       final x = random.nextDouble() * size.width;
       final y = random.nextDouble() * size.height;
-      final radius = 20 + random.nextDouble() * 80;
+      final radius = 30 + random.nextDouble() * 100;
 
       canvas.drawCircle(
         Offset(x, y),

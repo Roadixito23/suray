@@ -357,7 +357,7 @@ class _HomePageState extends State<HomePage> {
 
                       // --- Título Adaptativo ---
                       Text(
-                        'Horario de Buses Suray Ruta 240',
+                        'Horarios de Buses Suray Ruta 240',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'Hemiheads',

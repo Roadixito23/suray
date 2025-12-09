@@ -45,7 +45,6 @@ class _HomePageState extends State<HomePage> {
   final List<String> _panelImages = [
     'assets/home_panels/aysen.png',
     'assets/home_panels/tunel.png',
-    'assets/home_panels/buses.png',
     'assets/home_panels/terminal_coy.png',
     'assets/home_panels/puente_aysen.png',
   ];
@@ -408,25 +407,7 @@ class _HomePageState extends State<HomePage> {
                       // Tarjeta de información del día
                       _buildCurrentDayInfo(),
 
-                      // Indicadores de página
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(_panelImages.length, (index) {
-                            return AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                              height: 8.0,
-                              width: _currentPage == index ? 24.0 : 8.0,
-                              decoration: BoxDecoration(
-                                color: _currentPage == index ? MyApp.primaryOrange : Colors.white54,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            );
-                          }),
-                        ),
-                      ),
+                      const SizedBox(height: 20),
 
                       // Botón de horarios
                       ElevatedButton.icon(

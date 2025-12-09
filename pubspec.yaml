@@ -34,7 +34,9 @@ flutter:
     - assets/home_panels/terminal_coy.png
     - assets/home_panels/puente_aysen.png
     - assets/bg/background_route.png
+    - assets/logocircle.png
   fonts:
+    - family: Hemiheads
     - family: Hemiheads
       fonts:
         - asset: assets/fonts/Hemiheads.otf

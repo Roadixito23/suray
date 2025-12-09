@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
-import 'dart:ui' as ui;
 import 'home.dart';
 import 'main.dart'; // Importar para acceder a los colores
 
@@ -12,11 +11,16 @@ class SplashScreen extends StatefulWidget {
   _SplashScreenState createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
   late AnimationController _animationController;
+  late AnimationController _circleAnimationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<Offset> _slideAnimation;
+  late Animation<double> _logoRotationAnimation;
+  late Animation<double> _textFadeAnimation;
+  late Animation<Offset> _textSlideAnimation;
+  late Animation<double> _progressBarAnimation;
 
   // Control de carga de assets
   double _loadingProgress = 0.0;
@@ -40,31 +44,71 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   void initState() {
     super.initState();
 
+    // Controlador principal de animaciones
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 2500),
     );
 
+    // Controlador para círculos de fondo
+    _circleAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8),
+    )..repeat();
+
+    // Animación de fade para el logo
     _fadeAnimation = CurvedAnimation(
       parent: _animationController,
-      curve: const Interval(0.0, 0.8, curve: Curves.easeInOut),
+      curve: const Interval(0.0, 0.6, curve: Curves.easeInOut),
     );
 
+    // Animación de escala con efecto bounce
     _scaleAnimation = Tween<double>(
-      begin: 0.8,
+      begin: 0.3,
       end: 1.0,
     ).animate(CurvedAnimation(
       parent: _animationController,
-      curve: const Interval(0.2, 1.0, curve: Curves.elasticOut),
+      curve: const Interval(0.0, 0.7, curve: Curves.elasticOut),
     ));
 
+    // Animación de rotación sutil para el logo
+    _logoRotationAnimation = Tween<double>(
+      begin: -0.1,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.0, 0.7, curve: Curves.easeOutBack),
+    ));
+
+    // Animación de slide para elementos superiores
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
+      begin: const Offset(0, -0.3),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _animationController,
-      curve: const Interval(0.4, 1.0, curve: Curves.easeOutCubic),
+      curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
     ));
+
+    // Animación de fade para el texto
+    _textFadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.5, 1.0, curve: Curves.easeIn),
+    );
+
+    // Animación de slide para el texto
+    _textSlideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.5, 1.0, curve: Curves.easeOutCubic),
+    ));
+
+    // Animación para la barra de progreso
+    _progressBarAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.6, 1.0, curve: Curves.easeInOut),
+    );
 
     _animationController.forward();
 
@@ -74,6 +118,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   /// Precarga todos los assets críticos en segundo plano
   Future<void> _preloadAssets() async {
+    // Registrar el tiempo de inicio para garantizar un mínimo de 4 segundos
+    final startTime = DateTime.now();
+    const minSplashDuration = Duration(seconds: 4);
+
     try {
       setState(() {
         _loadingMessage = 'Cargando recursos...';
@@ -114,27 +162,84 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         });
       }
 
-      // Esperar un mínimo de tiempo para que se vea la animación
-      await Future.delayed(const Duration(milliseconds: 800));
+      // Calcular cuánto tiempo ha pasado
+      final elapsedTime = DateTime.now().difference(startTime);
+      final remainingTime = minSplashDuration - elapsedTime;
 
-      // Navegar a Home
+      // Si han pasado menos de 4 segundos, esperar el tiempo restante
+      if (remainingTime.inMilliseconds > 0) {
+        await Future.delayed(remainingTime);
+      }
+
+      // Navegar a Home con animación elaborada
       if (mounted) {
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) => const HomePage(),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0.0, 0.1),
-                    end: Offset.zero,
-                  ).animate(animation),
-                  child: child,
-                ),
+              // Animación de fade
+              final fadeAnimation = Tween<double>(
+                begin: 0.0,
+                end: 1.0,
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
+              ));
+
+              // Animación de escala (zoom in)
+              final scaleAnimation = Tween<double>(
+                begin: 0.85,
+                end: 1.0,
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: const Interval(0.0, 1.0, curve: Curves.easeOutCubic),
+              ));
+
+              // Animación de slide
+              final slideAnimation = Tween<Offset>(
+                begin: const Offset(0.0, 0.08),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: const Interval(0.2, 1.0, curve: Curves.easeOutQuart),
+              ));
+
+              // Animación de fade out para el splash (opcional, para efecto cruzado)
+              final reverseFadeAnimation = Tween<double>(
+                begin: 1.0,
+                end: 0.0,
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
+              ));
+
+              return Stack(
+                children: [
+                  // Fade out del splash screen
+                  FadeTransition(
+                    opacity: reverseFadeAnimation,
+                    child: secondaryAnimation.status == AnimationStatus.completed
+                        ? const SizedBox.shrink()
+                        : Container(
+                            color: MyApp.primaryNavy,
+                          ),
+                  ),
+                  // Fade in, scale y slide del home
+                  FadeTransition(
+                    opacity: fadeAnimation,
+                    child: ScaleTransition(
+                      scale: scaleAnimation,
+                      child: SlideTransition(
+                        position: slideAnimation,
+                        child: child,
+                      ),
+                    ),
+                  ),
+                ],
               );
             },
-            transitionDuration: const Duration(milliseconds: 800),
+            transitionDuration: const Duration(milliseconds: 1200),
+            reverseTransitionDuration: const Duration(milliseconds: 800),
           ),
         );
       }
@@ -147,8 +252,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         });
       }
 
-      // Aún así navegar después de un tiempo
+      // Esperar al menos 2 segundos para mostrar el error
       await Future.delayed(const Duration(seconds: 2));
+
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const HomePage()),
@@ -200,7 +306,111 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   void dispose() {
     _animationController.dispose();
+    _circleAnimationController.dispose();
     super.dispose();
+  }
+
+  // Widget para círculos animados de fondo
+  Widget _buildAnimatedCircles() {
+    return AnimatedBuilder(
+      animation: _circleAnimationController,
+      builder: (context, child) {
+        return Stack(
+          children: [
+            // Círculo 1 - Arriba izquierda
+            Positioned(
+              top: -100 + (50 * _circleAnimationController.value),
+              left: -100 + (30 * _circleAnimationController.value),
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      MyApp.primaryNavy.withValues(alpha: 0.3),
+                      MyApp.primaryNavy.withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Círculo 2 - Arriba derecha
+            Positioned(
+              top: 50 - (40 * _circleAnimationController.value),
+              right: -80 - (20 * _circleAnimationController.value),
+              child: Container(
+                width: 250,
+                height: 250,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      MyApp.primaryOrange.withValues(alpha: 0.2),
+                      MyApp.primaryOrange.withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Círculo 3 - Centro
+            Positioned(
+              top: MediaQuery.of(context).size.height / 2 - 150 + (30 * _circleAnimationController.value),
+              left: MediaQuery.of(context).size.width / 2 - 150 - (40 * _circleAnimationController.value),
+              child: Container(
+                width: 350,
+                height: 350,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      MyApp.lightNavy.withValues(alpha: 0.25),
+                      MyApp.lightNavy.withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Círculo 4 - Abajo izquierda
+            Positioned(
+              bottom: -120 - (60 * _circleAnimationController.value),
+              left: 20 + (50 * _circleAnimationController.value),
+              child: Container(
+                width: 280,
+                height: 280,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      MyApp.primaryOrange.withValues(alpha: 0.25),
+                      MyApp.primaryOrange.withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Círculo 5 - Abajo derecha
+            Positioned(
+              bottom: -50 + (70 * _circleAnimationController.value),
+              right: -120 + (30 * _circleAnimationController.value),
+              child: Container(
+                width: 320,
+                height: 320,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      MyApp.accentBlue.withValues(alpha: 0.2),
+                      MyApp.accentBlue.withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -214,7 +424,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             colors: [
               MyApp.primaryNavy,
               MyApp.lightNavy,
-              MyApp.primaryOrange.withOpacity(0.8),
+              MyApp.primaryOrange.withValues(alpha: 0.8),
             ],
             stops: const [0.0, 0.6, 1.0],
           ),
@@ -224,7 +434,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             // Patrón de fondo sutil
             Positioned.fill(
               child: Opacity(
-                opacity: 0.1,
+                opacity: 0.08,
                 child: Container(
                   decoration: const BoxDecoration(
                     image: DecorationImage(
@@ -234,6 +444,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   ),
                 ),
               ),
+            ),
+
+            // Círculos animados de fondo
+            Positioned.fill(
+              child: _buildAnimatedCircles(),
             ),
 
             // Contenido principal
@@ -247,151 +462,115 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Container para el logo con efecto de brillo
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(30),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.3),
-                              width: 2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: MyApp.primaryOrange.withOpacity(0.3),
-                                blurRadius: 30,
-                                spreadRadius: 5,
-                              ),
-                            ],
-                          ),
-                          child: Image.asset(
-                            'assets/logo.png',
-                            width: 200,
-                            height: 200,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-
-                        const SizedBox(height: 30),
-
-                        // Título principal con animación
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: MyApp.primaryOrange,
-                            borderRadius: BorderRadius.circular(25),
-                            boxShadow: [
-                              BoxShadow(
-                                color: MyApp.primaryOrange.withOpacity(0.4),
-                                blurRadius: 15,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Text(
-                            'Buses Suray',
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              color: Colors.white,
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Descripción adicional
-                        Text(
-                          'Ruta 240 • Servicios especiales',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.white.withOpacity(0.7),
-                            fontSize: 14,
-                            letterSpacing: 1,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-
-                        const SizedBox(height: 60),
-
-                        // Indicador de carga personalizado con progreso
-                        Column(
-                          children: [
-                            // Indicador circular con progreso
-                            Container(
-                              width: 60,
-                              height: 60,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(30),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.3),
-                                  width: 2,
-                                ),
-                              ),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  CircularProgressIndicator(
+                        // Container para el logo circular con círculo de carga y rotación
+                        RotationTransition(
+                          turns: _logoRotationAnimation,
+                          child: SizedBox(
+                            width: 240,
+                            height: 240,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                // Círculo de carga animado de fondo (similar a YouTube)
+                                SizedBox(
+                                  width: 240,
+                                  height: 240,
+                                  child: CircularProgressIndicator(
                                     value: _assetsLoaded ? null : _loadingProgress,
-                                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                                    backgroundColor: Colors.white.withOpacity(0.2),
-                                    strokeWidth: 3,
+                                    strokeWidth: 4,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      MyApp.primaryOrange,
+                                    ),
+                                    backgroundColor: Colors.white.withValues(alpha: 0.1),
                                   ),
-                                  if (!_assetsLoaded && _loadingProgress > 0)
-                                    Text(
-                                      '${(_loadingProgress * 100).toInt()}%',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
+                                ),
+                                // Logo circular en el centro
+                                Container(
+                                  width: 200,
+                                  height: 200,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: MyApp.primaryOrange.withValues(alpha: 0.4),
+                                        blurRadius: 30,
+                                        spreadRadius: 5,
+                                      ),
+                                      BoxShadow(
+                                        color: MyApp.primaryNavy.withValues(alpha: 0.3),
+                                        blurRadius: 50,
+                                        spreadRadius: 10,
+                                      ),
+                                    ],
+                                  ),
+                                  child: ClipOval(
+                                    child: Image.asset(
+                                      'assets/logocircle.png',
+                                      width: 200,
+                                      height: 200,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        // Mensaje de estado y barra de progreso con animación
+                        FadeTransition(
+                          opacity: _progressBarAnimation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0, 0.3),
+                              end: Offset.zero,
+                            ).animate(_progressBarAnimation),
+                            child: Column(
+                              children: [
+                                // Mensaje de estado
+                                Text(
+                                  _loadingMessage,
+                                  style: TextStyle(
+                                    color: _hasError
+                                        ? Colors.red.shade300
+                                        : Colors.white.withValues(alpha: 0.95),
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                // Barra de progreso horizontal
+                                Container(
+                                  width: 220,
+                                  height: 3,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                  child: FractionallySizedBox(
+                                    alignment: Alignment.centerLeft,
+                                    widthFactor: _assetsLoaded ? 1.0 : _loadingProgress,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: MyApp.primaryOrange,
+                                        borderRadius: BorderRadius.circular(2),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: MyApp.primaryOrange.withValues(alpha: 0.7),
+                                            blurRadius: 8,
+                                            spreadRadius: 1,
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            // Mensaje de estado
-                            Text(
-                              _loadingMessage,
-                              style: TextStyle(
-                                color: _hasError
-                                    ? Colors.red.shade300
-                                    : Colors.white.withOpacity(0.8),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            // Barra de progreso adicional para mejor visualización
-                            if (!_assetsLoaded && _loadingProgress > 0) ...[
-                              const SizedBox(height: 12),
-                              Container(
-                                width: 200,
-                                height: 4,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                                child: FractionallySizedBox(
-                                  alignment: Alignment.centerLeft,
-                                  widthFactor: _loadingProgress,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: MyApp.primaryOrange,
-                                      borderRadius: BorderRadius.circular(2),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: MyApp.primaryOrange.withOpacity(0.5),
-                                          blurRadius: 4,
-                                          spreadRadius: 1,
-                                        ),
-                                      ],
-                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ],
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -400,21 +579,50 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               ),
             ),
 
-            // Versión en la esquina inferior
+            // Información inferior: Desarrollador y Versión
             Positioned(
-              bottom: 30,
+              bottom: 20,
               left: 0,
               right: 0,
               child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: Text(
-                  'v01.08.25',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.6),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  textAlign: TextAlign.center,
+                opacity: _textFadeAnimation,
+                child: Column(
+                  children: [
+                    // Developed by
+                    Text(
+                      'Developed by:',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.5),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w400,
+                        letterSpacing: 0.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    // Email del desarrollador
+                    Text(
+                      'dante@suray.cl',
+                      style: TextStyle(
+                        color: MyApp.primaryOrange.withValues(alpha: 0.9),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    // Versión
+                    Text(
+                      'v06.12.25',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.5),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ),
             ),

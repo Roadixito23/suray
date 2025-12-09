@@ -43,7 +43,6 @@ class _HomePageState extends State<HomePage> {
   final List<String> _panelImages = [
     'assets/home_panels/aysen.png',
     'assets/home_panels/tunel.png',
-    'assets/home_panels/buses.png',
     'assets/home_panels/terminal_coy.png',
     'assets/home_panels/puente_aysen.png',
   ];
@@ -302,18 +301,10 @@ class _HomePageState extends State<HomePage> {
                               // VISTA PARA PANTALLAS PEQUEÑAS (VERTICAL)
                               return Column(
                                 children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Image.asset('assets/logo.png', height: 60, fit: BoxFit.contain),
-                                      CompactWeatherWidget(
-                                        coyhaique: _coyhaqueWeather,
-                                        puertoAysen: _puertoAysenWeather,
-                                        isLoading: _isWeatherLoading,
-                                      ),
-                                    ],
+                                  Center(
+                                    child: Image.asset('assets/logo.png', height: 60, fit: BoxFit.contain),
                                   ),
-                                  const SizedBox(height: 10),
+                                  const SizedBox(height: 15),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
@@ -321,6 +312,14 @@ class _HomePageState extends State<HomePage> {
                                       const SizedBox(width: 10),
                                       _buildHeroNavButton('Nuestra Ruta', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HorizontalRouteMap()))),
                                     ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Center(
+                                    child: CompactWeatherWidget(
+                                      coyhaique: _coyhaqueWeather,
+                                      puertoAysen: _puertoAysenWeather,
+                                      isLoading: _isWeatherLoading,
+                                    ),
                                   ),
                                 ],
                               );
@@ -357,7 +356,7 @@ class _HomePageState extends State<HomePage> {
 
                       // --- Título Adaptativo ---
                       Text(
-                        'Horarios de Buses Suray Ruta 240',
+                        'Horarios',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'Hemiheads',
@@ -374,25 +373,7 @@ class _HomePageState extends State<HomePage> {
                       // Tarjeta de Información del Día
                       _buildCurrentDayInfo(),
 
-                      // Indicadores de Página
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(_panelImages.length, (index) {
-                            return AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                              height: 8.0,
-                              width: _currentPage == index ? 24.0 : 8.0,
-                              decoration: BoxDecoration(
-                                color: _currentPage == index ? MyApp.primaryOrange : Colors.white54,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            );
-                          }),
-                        ),
-                      ),
+                      const SizedBox(height: 20),
 
                       // Botón de Horarios
                       ElevatedButton.icon(

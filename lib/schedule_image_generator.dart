@@ -34,7 +34,7 @@ class ScheduleImageGenerator {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // --- Encabezado SIN fuentes personalizadas ---
+          // --- Encabezado ---
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -45,7 +45,6 @@ class ScheduleImageGenerator {
             ),
             child: Column(
               children: [
-                // CAMBIADO: Sin fontFamily personalizada
                 const Text(
                   'BUSES SURAY',
                   style: TextStyle(
@@ -75,7 +74,6 @@ class ScheduleImageGenerator {
             ),
           ),
           const SizedBox(height: 8),
-          // CAMBIADO: Sin fontFamily personalizada
           const Text(
             'Horarios de Buses',
             style: TextStyle(
@@ -86,30 +84,32 @@ class ScheduleImageGenerator {
           ),
           const SizedBox(height: 16),
 
-          // --- Tablas de Horarios ---
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Salidas desde Aysén
-              Expanded(
-                child: _buildScheduleTable(
-                  'Salidas desde Puerto Aysén',
-                  aysenSchedules,
-                  MyApp.primaryNavy,
-                  Icons.location_on_rounded,
-                ),
-              ),
-              const SizedBox(width: 16),
-              // Salidas desde Coyhaique
-              Expanded(
-                child: _buildScheduleTable(
-                  'Salidas desde Coyhaique',
-                  coyhaiqueSchedules,
-                  MyApp.accentBlue,
-                  Icons.location_city_rounded,
-                ),
-              ),
-            ],
+          // --- Nueva estructura: Encabezados por sección con dos columnas ---
+
+          // Sección Lunes a Viernes
+          _buildDaySection(
+            'Lunes a Viernes',
+            aysenSchedules['lunesViernes'] ?? [],
+            coyhaiqueSchedules['lunesViernes'] ?? [],
+            Icons.work_rounded,
+          ),
+          const SizedBox(height: 16),
+
+          // Sección Sábados
+          _buildDaySection(
+            'Sábados',
+            aysenSchedules['sabados'] ?? [],
+            coyhaiqueSchedules['sabados'] ?? [],
+            Icons.weekend_rounded,
+          ),
+          const SizedBox(height: 16),
+
+          // Sección Domingo o Feriado
+          _buildDaySection(
+            'Domingo o Feriado',
+            aysenSchedules['domingosFeriados'] ?? [],
+            coyhaiqueSchedules['domingosFeriados'] ?? [],
+            Icons.celebration_rounded,
           ),
           const SizedBox(height: 20),
 
@@ -141,21 +141,32 @@ class ScheduleImageGenerator {
     );
   }
 
-  /// Widget helper para construir una tabla de horarios individual.
-  Widget _buildScheduleTable(String title, Map<String, List<String>> schedules, Color headerColor, IconData icon) {
+  /// Widget helper para construir una sección de día con dos columnas (Aysén y Coyhaique).
+  Widget _buildDaySection(String dayTitle, List<String> aysenTimes, List<String> coyhaiqueTimes, IconData icon) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: MyApp.borderColor, width: 2),
+        border: Border.all(color: MyApp.primaryNavy, width: 2),
         borderRadius: BorderRadius.circular(12),
         color: MyApp.surfaceWhite,
+        boxShadow: [
+          BoxShadow(
+            color: MyApp.primaryNavy.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          // Header de la tabla
+          // Encabezado común para el tipo de día
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             decoration: BoxDecoration(
-              color: headerColor,
+              gradient: LinearGradient(
+                colors: [MyApp.primaryOrange, MyApp.deepOrange],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(10),
                 topRight: Radius.circular(10),
@@ -164,59 +175,95 @@ class ScheduleImageGenerator {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                    textAlign: TextAlign.center,
+                Icon(icon, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Text(
+                  dayTitle,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    letterSpacing: 0.5,
                   ),
                 ),
               ],
             ),
           ),
-          // Contenido de la tabla
-          _buildScheduleCategory('Lunes a Viernes', schedules['lunesViernes'] ?? []),
-          _buildScheduleCategory('Sábados', schedules['sabados'] ?? []),
-          _buildScheduleCategory('Domingos y Feriados', schedules['domingosFeriados'] ?? []),
+
+          // Dos columnas: Aysén (izquierda) y Coyhaique (derecha)
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Columna Aysén
+                Expanded(
+                  child: _buildCityColumn(
+                    'Puerto Aysén',
+                    aysenTimes,
+                    MyApp.primaryNavy,
+                    Icons.location_on_rounded,
+                    isLeft: true,
+                  ),
+                ),
+                // Separador vertical
+                Container(
+                  width: 2,
+                  color: MyApp.borderColor,
+                ),
+                // Columna Coyhaique
+                Expanded(
+                  child: _buildCityColumn(
+                    'Coyhaique',
+                    coyhaiqueTimes,
+                    MyApp.accentBlue,
+                    Icons.location_city_rounded,
+                    isLeft: false,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  /// Widget helper para una categoría de día (ej. Lunes a Viernes).
-  Widget _buildScheduleCategory(String title, List<String> times) {
+  /// Widget helper para construir una columna de ciudad individual.
+  Widget _buildCityColumn(String cityName, List<String> times, Color accentColor, IconData icon, {required bool isLeft}) {
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: MyApp.borderColor, width: 1)),
-      ),
+      padding: const EdgeInsets.all(14),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: MyApp.primaryOrange.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-                color: MyApp.darkTextColor,
+          // Nombre de la ciudad con ícono
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: accentColor, size: 16),
               ),
-            ),
+              const SizedBox(width: 8),
+              Text(
+                cityName,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: accentColor,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
+
+          // Horarios
           if (times.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(8.0),
+            Padding(
+              padding: const EdgeInsets.all(12.0),
               child: Text(
                 'No hay horarios',
                 style: TextStyle(
@@ -227,24 +274,30 @@ class ScheduleImageGenerator {
               ),
             )
           else
-          // Usamos Wrap para que los horarios fluyan si no caben en una línea
             Wrap(
-              spacing: 6.0,
-              runSpacing: 6.0,
+              spacing: 5.0,
+              runSpacing: 5.0,
               alignment: WrapAlignment.center,
               children: times.map((time) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: MyApp.lightGreyBackground,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: MyApp.borderColor, width: 1),
+                  gradient: LinearGradient(
+                    colors: [
+                      accentColor.withOpacity(0.1),
+                      accentColor.withOpacity(0.05),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: accentColor.withOpacity(0.3), width: 1.5),
                 ),
                 child: Text(
                   time,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     color: MyApp.darkTextColor,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               )).toList(),

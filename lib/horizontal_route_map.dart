@@ -165,6 +165,54 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
           : _stations.isEmpty
           ? _buildEmptyState()
           : _buildRouteMap(isMobile, screenSize),
+      // Barra de navegación para facilitar navegación en PC
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: MyApp.primaryNavy,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              ElevatedButton.icon(
+                onPressed: _loadStations,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Recargar'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: MyApp.primaryOrange,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _showInfoDialog(context),
+                icon: const Icon(Icons.info_outline),
+                label: const Text('Información'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: MyApp.primaryOrange,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('Atrás'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: MyApp.accentBlue,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

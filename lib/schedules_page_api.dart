@@ -509,7 +509,7 @@ class _SchedulesPageState extends State<SchedulesPage> {
       _buildScheduleTable('Lunes a Viernes', schedules['lunesViernes'] ?? [], region, 'weekdays',
           fontSize: fontSize, chipPadding: chipPadding),
       _buildScheduleTable('Sábados', schedules['sabados'] ?? [], region, 'saturday', fontSize: fontSize, chipPadding: chipPadding),
-      _buildScheduleTable('Domingos y Feriados', schedules['domingosFeriados'] ?? [], region, 'sunday_holidays',
+      _buildScheduleTable('Domingo o Feriado', schedules['domingosFeriados'] ?? [], region, 'sunday_holidays',
           fontSize: fontSize, chipPadding: chipPadding),
     ];
 

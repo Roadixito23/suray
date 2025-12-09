@@ -6,10 +6,6 @@ import 'splash.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // La carga del archivo .env ha sido eliminada
-  // await dotenv.load(fileName: ".env");
-
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );

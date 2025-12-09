@@ -10,21 +10,156 @@ IconData _getCupertinoIcon(String? weatherText) {
 
   final lowerCaseText = weatherText.toLowerCase();
 
-  // Mapeo de descripciones de clima a íconos de Cupertino
-  if (lowerCaseText.contains('soleado') || lowerCaseText.contains('despejado')) {
-    return CupertinoIcons.sun_max_fill;
-  } else if (lowerCaseText.contains('nubes') || lowerCaseText.contains('nublado') || lowerCaseText.contains('cubierto')) {
-    return CupertinoIcons.cloud_fill;
-  } else if (lowerCaseText.contains('lluvia') || lowerCaseText.contains('llovizna') || lowerCaseText.contains('aguacero') || lowerCaseText.contains('chubascos')) {
-    return CupertinoIcons.cloud_rain_fill;
-  } else if (lowerCaseText.contains('nieve') || lowerCaseText.contains('aguanieve') || lowerCaseText.contains('hielo') || lowerCaseText.contains('nevada')) {
-    return CupertinoIcons.snow;
-  } else if (lowerCaseText.contains('tormenta') || lowerCaseText.contains('rayos') || lowerCaseText.contains('truenos')) {
+  // Mapeo extendido de descripciones de clima a íconos de Cupertino
+
+  // Tormentas eléctricas (prioridad alta)
+  if (lowerCaseText.contains('tormenta') ||
+      lowerCaseText.contains('rayos') ||
+      lowerCaseText.contains('truenos') ||
+      lowerCaseText.contains('eléctrica') ||
+      lowerCaseText.contains('electrica')) {
     return CupertinoIcons.bolt_fill;
-  } else if (lowerCaseText.contains('niebla') || lowerCaseText.contains('bruma')) {
+  }
+
+  // Lluvia intensa
+  else if (lowerCaseText.contains('lluvia fuerte') ||
+           lowerCaseText.contains('lluvia intensa') ||
+           lowerCaseText.contains('aguacero') ||
+           lowerCaseText.contains('diluvio') ||
+           lowerCaseText.contains('torrencial')) {
+    return CupertinoIcons.cloud_heavyrain_fill;
+  }
+
+  // Lluvia con nieve
+  else if (lowerCaseText.contains('aguanieve') ||
+           (lowerCaseText.contains('lluvia') && lowerCaseText.contains('nieve')) ||
+           lowerCaseText.contains('cellisca')) {
+    return CupertinoIcons.cloud_sleet_fill;
+  }
+
+  // Nieve
+  else if (lowerCaseText.contains('nieve') ||
+           lowerCaseText.contains('nevada') ||
+           lowerCaseText.contains('nevando') ||
+           lowerCaseText.contains('nevada ligera') ||
+           lowerCaseText.contains('nevada moderada') ||
+           lowerCaseText.contains('nevada fuerte')) {
+    return CupertinoIcons.snow;
+  }
+
+  // Lluvia (general)
+  else if (lowerCaseText.contains('lluvia') ||
+           lowerCaseText.contains('lluvioso') ||
+           lowerCaseText.contains('lloviendo') ||
+           lowerCaseText.contains('chubascos') ||
+           lowerCaseText.contains('chubasco') ||
+           lowerCaseText.contains('precipitación') ||
+           lowerCaseText.contains('precipitacion')) {
+    return CupertinoIcons.cloud_rain_fill;
+  }
+
+  // Llovizna
+  else if (lowerCaseText.contains('llovizna') ||
+           lowerCaseText.contains('garúa') ||
+           lowerCaseText.contains('garua') ||
+           lowerCaseText.contains('calabobos')) {
+    return CupertinoIcons.cloud_drizzle_fill;
+  }
+
+  // Niebla, bruma, neblina
+  else if (lowerCaseText.contains('niebla') ||
+           lowerCaseText.contains('bruma') ||
+           lowerCaseText.contains('neblina') ||
+           lowerCaseText.contains('calima') ||
+           lowerCaseText.contains('neblinoso') ||
+           lowerCaseText.contains('brumoso')) {
     return CupertinoIcons.cloud_fog_fill;
-  } else {
-    return CupertinoIcons.question_circle; // Ícono por defecto si no coincide
+  }
+
+  // Granizo
+  else if (lowerCaseText.contains('granizo') ||
+           lowerCaseText.contains('granizada') ||
+           lowerCaseText.contains('pedrisco')) {
+    return CupertinoIcons.cloud_hail_fill;
+  }
+
+  // Viento fuerte
+  else if (lowerCaseText.contains('ventoso') ||
+           lowerCaseText.contains('viento fuerte') ||
+           lowerCaseText.contains('ráfagas') ||
+           lowerCaseText.contains('rafagas') ||
+           lowerCaseText.contains('vendaval')) {
+    return CupertinoIcons.wind;
+  }
+
+  // Parcialmente nublado / algo de nubes
+  else if (lowerCaseText.contains('algo nublado') ||
+           lowerCaseText.contains('parcialmente nublado') ||
+           lowerCaseText.contains('poco nublado') ||
+           lowerCaseText.contains('nubes dispersas') ||
+           lowerCaseText.contains('intervalos nubosos')) {
+    return CupertinoIcons.cloud_sun_fill;
+  }
+
+  // Muy nublado / cubierto
+  else if (lowerCaseText.contains('muy nublado') ||
+           lowerCaseText.contains('cubierto') ||
+           lowerCaseText.contains('nublado') ||
+           lowerCaseText.contains('nubes') ||
+           lowerCaseText.contains('nuboso') ||
+           lowerCaseText.contains('nubosidad')) {
+    return CupertinoIcons.cloud_fill;
+  }
+
+  // Despejado / soleado
+  else if (lowerCaseText.contains('despejado') ||
+           lowerCaseText.contains('soleado') ||
+           lowerCaseText.contains('sol') ||
+           lowerCaseText.contains('cielo claro') ||
+           lowerCaseText.contains('cielo limpio') ||
+           lowerCaseText.contains('claro')) {
+    return CupertinoIcons.sun_max_fill;
+  }
+
+  // Tornado / fenómenos extremos
+  else if (lowerCaseText.contains('tornado') ||
+           lowerCaseText.contains('huracán') ||
+           lowerCaseText.contains('huracan') ||
+           lowerCaseText.contains('ciclón') ||
+           lowerCaseText.contains('ciclon')) {
+    return CupertinoIcons.tornado;
+  }
+
+  // Arena / polvo
+  else if (lowerCaseText.contains('arena') ||
+           lowerCaseText.contains('polvo') ||
+           lowerCaseText.contains('arenoso') ||
+           lowerCaseText.contains('polvareda')) {
+    return CupertinoIcons.wind_snow;
+  }
+
+  // Ceniza volcánica
+  else if (lowerCaseText.contains('ceniza') ||
+           lowerCaseText.contains('volcánica') ||
+           lowerCaseText.contains('volcanica')) {
+    return CupertinoIcons.smoke_fill;
+  }
+
+  // Humo
+  else if (lowerCaseText.contains('humo') ||
+           lowerCaseText.contains('ahumado')) {
+    return CupertinoIcons.smoke_fill;
+  }
+
+  // Luna (noche despejada)
+  else if (lowerCaseText.contains('noche') &&
+          (lowerCaseText.contains('despejado') || lowerCaseText.contains('claro'))) {
+    return CupertinoIcons.moon_stars_fill;
+  }
+
+  // Por defecto
+  else {
+    return CupertinoIcons.cloud; // Ícono de nube genérico en lugar de interrogación
   }
 }
 

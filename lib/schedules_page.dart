@@ -364,15 +364,9 @@ class _SchedulesPageState extends State<SchedulesPage> {
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
     final screenWidth = screenSize.width;
-    final screenHeight = screenSize.height;
 
     // Detección mejorada de dispositivos móviles
     final bool isMobilePortrait = screenWidth < 600;
-    final bool isTabletPortrait = screenWidth >= 600 && screenWidth < 900;
-    final bool isDesktop = screenWidth >= 900;
-
-    // Detectar orientación
-    final bool isPortrait = screenHeight > screenWidth;
 
     // Calcular el tamaño de fuente dinámicamente para móviles
     final double baseFontSize = isMobilePortrait ? 13.0 : 14.0;
@@ -473,22 +467,34 @@ class _SchedulesPageState extends State<SchedulesPage> {
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                _buildSection(
-                  'Salidas desde Puerto Aysén',
-                  'aysen',
-                  isDesktop,
-                  MyApp.primaryNavy,
-                  Icons.location_city_rounded,
+                // Sección Lunes a Viernes
+                _buildDaySection(
+                  'Lunes a Viernes',
+                  'lunesViernes',
+                  'weekdays',
+                  Icons.work_rounded,
                   fontSize: baseFontSize,
                   chipPadding: chipPadding,
                 ),
                 const SizedBox(height: 24),
-                _buildSection(
-                  'Salidas desde Coyhaique',
-                  'coyhaique',
-                  isDesktop,
-                  MyApp.accentBlue,
-                  Icons.location_city_rounded,
+
+                // Sección Sábados
+                _buildDaySection(
+                  'Sábados',
+                  'sabados',
+                  'saturday',
+                  Icons.weekend_rounded,
+                  fontSize: baseFontSize,
+                  chipPadding: chipPadding,
+                ),
+                const SizedBox(height: 24),
+
+                // Sección Domingo o Feriado
+                _buildDaySection(
+                  'Domingo o Feriado',
+                  'domingosFeriados',
+                  'sunday_holidays',
+                  Icons.celebration_rounded,
                   fontSize: baseFontSize,
                   chipPadding: chipPadding,
                 ),
@@ -500,20 +506,15 @@ class _SchedulesPageState extends State<SchedulesPage> {
     );
   }
 
-  Widget _buildSection(String title, String region, bool isDesktop, Color color, IconData icon, {double fontSize = 14.0, double chipPadding = 16.0}) {
-    final scheduleWidgets = [
-      _buildScheduleTable('Lunes a Viernes', _timesStream(region, 'lunesViernes'), region, 'weekdays', fontSize: fontSize, chipPadding: chipPadding),
-      _buildScheduleTable('Sábados', _timesStream(region, 'sabados'), region, 'saturday', fontSize: fontSize, chipPadding: chipPadding),
-      _buildScheduleTable('Domingos y Feriados', _timesStream(region, 'domingosFeriados'), region, 'sunday_holidays', fontSize: fontSize, chipPadding: chipPadding),
-    ];
-
+  // Nuevo método para construir sección por día con dos ciudades lado a lado
+  Widget _buildDaySection(String dayTitle, String dayCollection, String tableType, IconData icon, {double fontSize = 14.0, double chipPadding = 16.0}) {
     return Container(
       decoration: BoxDecoration(
         color: MyApp.surfaceWhite,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.1),
+            color: MyApp.primaryNavy.withOpacity(0.1),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -524,17 +525,16 @@ class _SchedulesPageState extends State<SchedulesPage> {
         ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header con gradiente
+          // Encabezado común para el tipo de día
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [color, color.withOpacity(0.8)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+                colors: [MyApp.primaryOrange, MyApp.deepOrange],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
               ),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
@@ -542,49 +542,66 @@ class _SchedulesPageState extends State<SchedulesPage> {
               ),
             ),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(icon, color: Colors.white, size: 24),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Colors.white,
-                      fontSize: 20,
-                    ),
+                const SizedBox(width: 12),
+                Text(
+                  dayTitle,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
           ),
-          // Contenido
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: isDesktop
-                ? Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+
+          // Dos columnas: Aysén (izquierda) y Coyhaique (derecha)
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(child: scheduleWidgets[0]),
-                const SizedBox(width: 20),
-                Expanded(child: scheduleWidgets[1]),
-                const SizedBox(width: 20),
-                Expanded(child: scheduleWidgets[2]),
-              ],
-            )
-                : Column(
-              children: scheduleWidgets.map((widget) =>
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 20),
-                    child: widget,
+                // Columna Puerto Aysén
+                Expanded(
+                  child: _buildCityScheduleColumn(
+                    'Puerto Aysén',
+                    'aysen',
+                    dayCollection,
+                    tableType,
+                    MyApp.primaryNavy,
+                    Icons.location_on_rounded,
+                    fontSize: fontSize,
+                    chipPadding: chipPadding,
                   ),
-              ).toList(),
+                ),
+                // Separador vertical
+                Container(
+                  width: 2,
+                  color: MyApp.borderColor,
+                ),
+                // Columna Coyhaique
+                Expanded(
+                  child: _buildCityScheduleColumn(
+                    'Coyhaique',
+                    'coyhaique',
+                    dayCollection,
+                    tableType,
+                    MyApp.accentBlue,
+                    Icons.location_city_rounded,
+                    fontSize: fontSize,
+                    chipPadding: chipPadding,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -592,59 +609,48 @@ class _SchedulesPageState extends State<SchedulesPage> {
     );
   }
 
-  Widget _buildScheduleTable(String title, Stream<List<String>> stream, String region, String tableType, {double fontSize = 14.0, double chipPadding = 16.0}) {
+  // Nueva columna individual de ciudad con sus horarios
+  Widget _buildCityScheduleColumn(String cityName, String region, String dayCollection, String tableType, Color accentColor, IconData icon, {double fontSize = 14.0, double chipPadding = 16.0}) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: MyApp.lightGreyBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: MyApp.borderColor,
-          width: 1,
-        ),
-      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Nombre de la ciudad con ícono
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: MyApp.primaryOrange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: accentColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(
-                  _getIconForScheduleType(title),
-                  color: MyApp.primaryOrange,
-                  size: 20,
-                ),
+                child: Icon(icon, color: accentColor, size: 20),
               ),
-              const SizedBox(width: 12),
-              Flexible(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: MyApp.primaryNavy,
-                    fontWeight: FontWeight.bold,
-                    fontSize: fontSize + 2,
-                  ),
+              const SizedBox(width: 10),
+              Text(
+                cityName,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: fontSize + 4,
+                  color: accentColor,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
+
+          // StreamBuilder para los horarios
           StreamBuilder<List<String>>(
-            stream: stream,
+            stream: _timesStream(region, dayCollection),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(20.0),
-                    child: CircularProgressIndicator(
-                      color: MyApp.primaryOrange,
-                      strokeWidth: 3,
-                    ),
+                return Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: CircularProgressIndicator(
+                    color: accentColor,
+                    strokeWidth: 3,
                   ),
                 );
               }
@@ -659,6 +665,7 @@ class _SchedulesPageState extends State<SchedulesPage> {
                   child: Text(
                     'Error: ${snapshot.error}',
                     style: TextStyle(color: MyApp.errorColor, fontSize: fontSize),
+                    textAlign: TextAlign.center,
                   ),
                 );
               }
@@ -670,13 +677,22 @@ class _SchedulesPageState extends State<SchedulesPage> {
                     color: MyApp.lightTextColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text('No hay horarios disponibles.', style: TextStyle(fontSize: fontSize)),
+                  child: Text(
+                    'No hay horarios disponibles.',
+                    style: TextStyle(
+                      fontSize: fontSize,
+                      color: MyApp.lightTextColor,
+                      fontStyle: FontStyle.italic,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 );
               }
 
               return Wrap(
-                spacing: 6.0,
-                runSpacing: 6.0,
+                spacing: 8.0,
+                runSpacing: 8.0,
+                alignment: WrapAlignment.center,
                 children: times.map((time) => _buildTimeChip(time, region, tableType, fontSize: fontSize, chipPadding: chipPadding)).toList(),
               );
             },
@@ -686,12 +702,6 @@ class _SchedulesPageState extends State<SchedulesPage> {
     );
   }
 
-  IconData _getIconForScheduleType(String title) {
-    if (title.contains('Lunes')) return Icons.work_rounded;
-    if (title.contains('Sábado')) return Icons.weekend_rounded;
-    if (title.contains('Domingo')) return Icons.weekend_rounded;
-    return Icons.schedule_rounded;
-  }
 
   Widget _buildTimeChip(String time, String region, String tableType, {double fontSize = 14.0, double chipPadding = 16.0}) {
     String? nextDeparture = region == 'aysen' ? widget.nextAysenDeparture : widget.nextCoyhaiqueDeparture;

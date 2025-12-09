@@ -285,19 +285,6 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
                     alignment: Alignment.center,
                   ),
                 ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.white.withOpacity(0.1),
-                        Colors.white.withOpacity(0.05),
-                        Colors.white.withOpacity(0.1),
-                      ],
-                    ),
-                  ),
-                ),
               ),
 
               // Mapa interactivo con zoom y pan para móviles
@@ -306,7 +293,7 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
                   transformationController: _transformationController,
                   minScale: isSmallScreen ? 0.5 : 0.8,
                   maxScale: isSmallScreen ? 3.0 : 2.0,
-                  boundaryMargin: EdgeInsets.all(isSmallScreen ? 100 : 200),
+                  boundaryMargin: EdgeInsets.all(isSmallScreen ? 50 : 100),
                   constrained: false,
                   child: Container(
                     width: canvasWidth,
@@ -399,6 +386,54 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
             ],
           );
         },
+      ),
+      // Barra de navegación para facilitar navegación en PC
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: primaryBlue,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () => _transformationController.value = Matrix4.identity(),
+                icon: const Icon(Icons.zoom_out_map),
+                label: const Text('Restablecer Zoom'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryOrange,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: _loadStationsFromFirestore,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Recargar'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryOrange,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('Atrás'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accentBlue,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -14,19 +14,24 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
   late AnimationController _animationController;
   late AnimationController _circleAnimationController;
+  late AnimationController _floatingController;
+  late AnimationController _neonController;
+  late AnimationController _finishController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _logoRotationAnimation;
   late Animation<double> _textFadeAnimation;
   late Animation<Offset> _textSlideAnimation;
-  late Animation<double> _progressBarAnimation;
+  late Animation<double> _floatingAnimation;
+  late Animation<Color?> _neonColorAnimation;
 
   // Control de carga de assets
   double _loadingProgress = 0.0;
   String _loadingMessage = 'Iniciando...';
   bool _assetsLoaded = false;
   bool _hasError = false;
+  bool _isFinishing = false;
 
   // Lista de assets críticos para precargar
   final List<String> _criticalAssets = [
@@ -104,10 +109,40 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       curve: const Interval(0.5, 1.0, curve: Curves.easeOutCubic),
     ));
 
-    // Animación para la barra de progreso
-    _progressBarAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: const Interval(0.6, 1.0, curve: Curves.easeInOut),
+    // Controlador para animación de flotación
+    _floatingController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
+
+    // Animación de flotación
+    _floatingAnimation = Tween<double>(
+      begin: -10.0,
+      end: 10.0,
+    ).animate(CurvedAnimation(
+      parent: _floatingController,
+      curve: Curves.easeInOut,
+    ));
+
+    // Controlador para efecto neón
+    _neonController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
+    // Animación de color neón
+    _neonColorAnimation = ColorTween(
+      begin: MyApp.primaryOrange,
+      end: MyApp.accentBlue,
+    ).animate(CurvedAnimation(
+      parent: _neonController,
+      curve: Curves.easeInOut,
+    ));
+
+    // Controlador para animación de finalización
+    _finishController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
     );
 
     _animationController.forward();
@@ -169,6 +204,23 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       // Si han pasado menos de 4 segundos, esperar el tiempo restante
       if (remainingTime.inMilliseconds > 0) {
         await Future.delayed(remainingTime);
+      }
+
+      // Activar animación de finalización
+      if (mounted) {
+        setState(() {
+          _isFinishing = true;
+        });
+
+        // Acelerar el círculo y cambiar a azul neón
+        _circleAnimationController.duration = const Duration(milliseconds: 300);
+        _circleAnimationController.repeat();
+
+        // Ejecutar animación de finalización
+        await _finishController.forward();
+
+        // Pequeña pausa para el efecto
+        await Future.delayed(const Duration(milliseconds: 200));
       }
 
       // Navegar a Home con animación elaborada
@@ -307,6 +359,9 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   void dispose() {
     _animationController.dispose();
     _circleAnimationController.dispose();
+    _floatingController.dispose();
+    _neonController.dispose();
+    _finishController.dispose();
     super.dispose();
   }
 
@@ -451,7 +506,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
               child: _buildAnimatedCircles(),
             ),
 
-            // Contenido principal
+            // Contenido principal - Logo centrado con animaciones
             Center(
               child: FadeTransition(
                 opacity: _fadeAnimation,
@@ -459,120 +514,128 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                   scale: _scaleAnimation,
                   child: SlideTransition(
                     position: _slideAnimation,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Container para el logo circular con círculo de carga y rotación
-                        RotationTransition(
-                          turns: _logoRotationAnimation,
-                          child: SizedBox(
-                            width: 240,
-                            height: 240,
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                // Círculo de carga animado de fondo (similar a YouTube)
-                                SizedBox(
-                                  width: 240,
-                                  height: 240,
-                                  child: CircularProgressIndicator(
-                                    value: _assetsLoaded ? null : _loadingProgress,
-                                    strokeWidth: 4,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      MyApp.primaryOrange,
-                                    ),
-                                    backgroundColor: Colors.white.withValues(alpha: 0.1),
-                                  ),
-                                ),
-                                // Logo circular en el centro
-                                Container(
-                                  width: 200,
-                                  height: 200,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: MyApp.primaryOrange.withValues(alpha: 0.4),
-                                        blurRadius: 30,
-                                        spreadRadius: 5,
-                                      ),
-                                      BoxShadow(
-                                        color: MyApp.primaryNavy.withValues(alpha: 0.3),
-                                        blurRadius: 50,
-                                        spreadRadius: 10,
-                                      ),
-                                    ],
-                                  ),
-                                  child: ClipOval(
-                                    child: Image.asset(
-                                      'assets/logocircle.png',
-                                      width: 200,
-                                      height: 200,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                    child: AnimatedBuilder(
+                      animation: _floatingAnimation,
+                      builder: (context, child) {
+                        return Transform.translate(
+                          offset: Offset(0, _floatingAnimation.value),
+                          child: child,
+                        );
+                      },
+                      child: RotationTransition(
+                        turns: _logoRotationAnimation,
+                        child: SizedBox(
+                          width: 260,
+                          height: 260,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              // Círculo de carga animado con efecto neón y rotación fluida
+                              AnimatedBuilder(
+                                animation: Listenable.merge([_neonColorAnimation, _circleAnimationController, _finishController]),
+                                builder: (context, child) {
+                                  // Determinar el color basado en si está finalizando
+                                  final Color circleColor = _isFinishing
+                                      ? MyApp.accentBlue
+                                      : (_neonColorAnimation.value ?? MyApp.primaryOrange);
 
-                        const SizedBox(height: 40),
+                                  // Intensidad del brillo aumenta al finalizar
+                                  final double glowIntensity = _isFinishing ? 1.0 : 0.6;
+                                  final double glowBlur = _isFinishing ? 60.0 : 40.0;
+                                  final double glowSpread = _isFinishing ? 15.0 : 8.0;
 
-                        // Mensaje de estado y barra de progreso con animación
-                        FadeTransition(
-                          opacity: _progressBarAnimation,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0, 0.3),
-                              end: Offset.zero,
-                            ).animate(_progressBarAnimation),
-                            child: Column(
-                              children: [
-                                // Mensaje de estado
-                                Text(
-                                  _loadingMessage,
-                                  style: TextStyle(
-                                    color: _hasError
-                                        ? Colors.red.shade300
-                                        : Colors.white.withValues(alpha: 0.95),
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                // Barra de progreso horizontal
-                                Container(
-                                  width: 220,
-                                  height: 3,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                  child: FractionallySizedBox(
-                                    alignment: Alignment.centerLeft,
-                                    widthFactor: _assetsLoaded ? 1.0 : _loadingProgress,
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: MyApp.primaryOrange,
-                                        borderRadius: BorderRadius.circular(2),
-                                        boxShadow: [
+                                  return Container(
+                                    width: 260,
+                                    height: 260,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: circleColor.withValues(alpha: glowIntensity),
+                                          blurRadius: glowBlur,
+                                          spreadRadius: glowSpread,
+                                        ),
+                                        BoxShadow(
+                                          color: MyApp.accentBlue.withValues(alpha: _isFinishing ? 0.8 : 0.3),
+                                          blurRadius: _isFinishing ? 80.0 : 60.0,
+                                          spreadRadius: _isFinishing ? 25.0 : 15.0,
+                                        ),
+                                        if (_isFinishing)
                                           BoxShadow(
-                                            color: MyApp.primaryOrange.withValues(alpha: 0.7),
-                                            blurRadius: 8,
-                                            spreadRadius: 1,
+                                            color: MyApp.accentBlue.withValues(alpha: 0.6),
+                                            blurRadius: 100.0,
+                                            spreadRadius: 30.0,
                                           ),
-                                        ],
+                                      ],
+                                    ),
+                                    child: RotationTransition(
+                                      turns: _circleAnimationController,
+                                      child: SizedBox(
+                                        width: 260,
+                                        height: 260,
+                                        child: CircularProgressIndicator(
+                                          value: 0.75, // Valor fijo para crear el efecto de acelerador
+                                          strokeWidth: _isFinishing ? 8.0 : 6.0,
+                                          valueColor: AlwaysStoppedAnimation<Color>(circleColor),
+                                          backgroundColor: Colors.white.withValues(alpha: _isFinishing ? 0.3 : 0.15),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                                  );
+                                },
+                              ),
+                              // Logo circular en el centro con sombras animadas
+                              AnimatedBuilder(
+                                animation: Listenable.merge([_neonColorAnimation, _finishController]),
+                                builder: (context, child) {
+                                  final Color logoGlowColor = _isFinishing
+                                      ? MyApp.accentBlue
+                                      : (_neonColorAnimation.value ?? MyApp.primaryOrange);
+
+                                  return Container(
+                                    width: 220,
+                                    height: 220,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: logoGlowColor.withValues(alpha: _isFinishing ? 0.8 : 0.5),
+                                          blurRadius: _isFinishing ? 50.0 : 35.0,
+                                          spreadRadius: _isFinishing ? 10.0 : 5.0,
+                                        ),
+                                        BoxShadow(
+                                          color: MyApp.primaryNavy.withValues(alpha: 0.4),
+                                          blurRadius: 50,
+                                          spreadRadius: 10,
+                                        ),
+                                        BoxShadow(
+                                          color: MyApp.accentBlue.withValues(alpha: _isFinishing ? 0.7 : 0.3),
+                                          blurRadius: _isFinishing ? 90.0 : 70.0,
+                                          spreadRadius: _isFinishing ? 25.0 : 15.0,
+                                        ),
+                                        if (_isFinishing)
+                                          BoxShadow(
+                                            color: MyApp.accentBlue.withValues(alpha: 0.5),
+                                            blurRadius: 110.0,
+                                            spreadRadius: 35.0,
+                                          ),
+                                      ],
+                                    ),
+                                    child: ClipOval(
+                                      child: Image.asset(
+                                        'assets/logocircle.png',
+                                        width: 220,
+                                        height: 220,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -614,7 +677,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                     const SizedBox(height: 12),
                     // Versión
                     Text(
-                      'v06.12.25',
+                      'v12.12.25',
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.5),
                         fontSize: 11,

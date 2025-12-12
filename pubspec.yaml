@@ -35,6 +35,7 @@ flutter:
     - assets/home_panels/puente_aysen.png
     - assets/bg/background_route.png
     - assets/logocircle.png
+    - assets/insta_icon.png
   fonts:
     - family: Hemiheads
     - family: Hemiheads

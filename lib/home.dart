@@ -3,11 +3,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'contact_page.dart';
-import 'horizontal_route_map.dart';
 import 'schedules_page.dart';
 import 'main.dart';
 import 'dual_weather_service.dart';
-import 'compact_weather_widget.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -41,10 +39,8 @@ class _HomePageState extends State<HomePage> {
 
   // --- Lógica para el carrusel de imágenes (existente) ---
   final List<String> _panelImages = [
-    'assets/home_panels/aysen.png',
     'assets/home_panels/tunel.png',
-    'assets/home_panels/terminal_coy.png',
-    'assets/home_panels/puente_aysen.png',
+    'assets/home_panels/aysen.png',
   ];
   late final PageController _pageController;
   Timer? _imageRotationTimer;
@@ -206,7 +202,7 @@ class _HomePageState extends State<HomePage> {
       final departureTime = _parseTime(time, referenceTime);
       if (departureTime != null && departureTime.isAfter(referenceTime)) return time;
     }
-    if (tomorrowTimes.isNotEmpty) return "${tomorrowTimes.first} (mañana)";
+    if (tomorrowTimes.isNotEmpty) return "Mañana a las ${tomorrowTimes.first}";
     return null;
   }
 
@@ -236,15 +232,7 @@ class _HomePageState extends State<HomePage> {
 
   String _getDayName(int weekday) => {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado', 7: 'Domingo'}[weekday] ?? 'Desconocido';
 
-  String _getDayTypeDescription(DateTime date) {
-    if (_isDateHoliday(date)) return 'Feriado: ${_holidays["${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}"]!['nombre']}';
-    switch (_getDayCollection(date)) {
-      case 'lunesViernes': return 'Horario de Lunes a Viernes';
-      case 'sabados': return 'Horario de Sábado';
-      case 'domingosFeriados': return 'Horario de Domingo y Feriados';
-      default: return 'Horario Desconocido';
-    }
-  }
+  String _getMonthAbbreviation(int month) => {1: 'ENE', 2: 'FEB', 3: 'MAR', 4: 'ABR', 5: 'MAY', 6: 'JUN', 7: 'JUL', 8: 'AGO', 9: 'SEP', 10: 'OCT', 11: 'NOV', 12: 'DIC'}[month] ?? '';
 
   // --- WIDGETS DE LA PÁGINA DE INICIO ---
 
@@ -288,10 +276,11 @@ class _HomePageState extends State<HomePage> {
 
             // 3. Contenido de la UI
             SafeArea(
+              bottom: false, // No aplicar padding inferior para que el footer esté pegado al borde
               // INICIO DE LA MODIFICACIÓN: Se añade SingleChildScrollView para scroll vertical
               child: SingleChildScrollView(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+                  padding: const EdgeInsets.only(left: 20.0, right: 20.0, top: 10.0, bottom: 70.0),
                   child: Column(
                     children: [
                       // --- Fila Superior Adaptativa ---
@@ -310,16 +299,8 @@ class _HomePageState extends State<HomePage> {
                                     children: [
                                       _buildHeroNavButton('Contacto', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContactPage()))),
                                       const SizedBox(width: 10),
-                                      _buildHeroNavButton('Nuestra Ruta', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HorizontalRouteMap()))),
+                                      _buildHeroNavButton('Nuestra Ruta', () {}), // Deshabilitado temporalmente
                                     ],
-                                  ),
-                                  const SizedBox(height: 20),
-                                  Center(
-                                    child: CompactWeatherWidget(
-                                      coyhaique: _coyhaqueWeather,
-                                      puertoAysen: _puertoAysenWeather,
-                                      isLoading: _isWeatherLoading,
-                                    ),
                                   ),
                                 ],
                               );
@@ -329,20 +310,11 @@ class _HomePageState extends State<HomePage> {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Image.asset('assets/logo.png', height: 100, fit: BoxFit.contain),
-                                  Expanded(
-                                    child: Center(
-                                      child: CompactWeatherWidget(
-                                        coyhaique: _coyhaqueWeather,
-                                        puertoAysen: _puertoAysenWeather,
-                                        isLoading: _isWeatherLoading,
-                                      ),
-                                    ),
-                                  ),
                                   Row(
                                     children: [
                                       _buildHeroNavButton('Contacto', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContactPage()))),
                                       const SizedBox(width: 10),
-                                      _buildHeroNavButton('Nuestra Ruta', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HorizontalRouteMap()))),
+                                      _buildHeroNavButton('Nuestra Ruta', () {}), // Deshabilitado temporalmente
                                     ],
                                   ),
                                 ],
@@ -354,18 +326,6 @@ class _HomePageState extends State<HomePage> {
                       // INICIO DE LA MODIFICACIÓN: Se reemplaza Spacer por SizedBox
                       const SizedBox(height: 30),
 
-                      // --- Título Adaptativo ---
-                      Text(
-                        'Horarios',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'Hemiheads',
-                          fontSize: isSmallScreen ? 32 : 42,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          shadows: const [Shadow(blurRadius: 10.0, color: Colors.black87, offset: Offset(2.0, 2.0))],
-                        ),
-                      ),
 
                       // INICIO DE LA MODIFICACIÓN: Se reemplaza Spacer por SizedBox
                       const SizedBox(height: 40),
@@ -408,6 +368,14 @@ class _HomePageState extends State<HomePage> {
               ),
               // FIN DE LA MODIFICACIÓN
             ),
+
+            // 4. Footer siempre visible en la parte inferior
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: _buildFooter(isSmallScreen),
+            ),
           ],
         ),
       ),
@@ -436,7 +404,8 @@ class _HomePageState extends State<HomePage> {
   Widget _buildCurrentDayInfo() {
     final now = DateTime.now();
     final dayName = _getDayName(now.weekday);
-    final dayTypeDescription = _getDayTypeDescription(now);
+    final dayNumber = now.day;
+    final monthAbbr = _getMonthAbbreviation(now.month);
     Color cardColor = _isTodayHoliday
         ? MyApp.errorColor.withOpacity(0.9)
         : MyApp.primaryNavy.withOpacity(0.9);
@@ -464,7 +433,21 @@ class _HomePageState extends State<HomePage> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const Center(
+            child: Text(
+              'HORARIOS',
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontFamily: 'Hemiheads',
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 12),
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
@@ -475,33 +458,31 @@ class _HomePageState extends State<HomePage> {
                 child: Icon(dayIcon, color: Colors.white, size: 20),
               ),
               const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  _isTodayHoliday ? 'Hoy es Feriado: $_todayHolidayName' : 'Hoy es $dayName',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+              Text(
+                _isTodayHoliday
+                    ? 'Hoy es Feriado: $_todayHolidayName'
+                    : 'Hoy es $dayName $dayNumber de $monthAbbr',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            dayTypeDescription,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white.withOpacity(0.8),
-            ),
-          ),
           const Divider(color: Colors.white24, height: 24),
-          const Text(
-            'Próximas Salidas:',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+          const Center(
+            child: Text(
+              'Próximas Salidas:',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontFamily: 'Hemiheads',
+              ),
+              textAlign: TextAlign.center,
             ),
           ),
           const SizedBox(height: 12),
@@ -517,59 +498,225 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ))
-          else ...[
-            if (_nextAysenDeparture != null)
-              _buildDepartureInfoRow('Desde Aysén:', _nextAysenDeparture!),
-            if (_nextCoyhaiqueDeparture != null)
-              _buildDepartureInfoRow('Desde Coyhaique:', _nextCoyhaiqueDeparture!),
-          ]
+          else
+            Row(
+              children: [
+                if (_nextAysenDeparture != null)
+                  Expanded(
+                    child: _buildDepartureInfoColumn('Desde Aysén', _nextAysenDeparture!, _puertoAysenWeather),
+                  ),
+                if (_nextAysenDeparture != null && _nextCoyhaiqueDeparture != null)
+                  const SizedBox(width: 12),
+                if (_nextCoyhaiqueDeparture != null)
+                  Expanded(
+                    child: _buildDepartureInfoColumn('Desde Coyhaique', _nextCoyhaiqueDeparture!, _coyhaqueWeather),
+                  ),
+              ],
+            )
         ],
       ),
     );
   }
 
-  Widget _buildDepartureInfoRow(String label, String time) {
+  Widget _buildDepartureInfoColumn(String city, String time, CompactWeatherData? weather) {
     return Container(
-      margin: const EdgeInsets.only(top: 8.0),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.white.withOpacity(0.2)),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
+          Text(
+            city,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.8),
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
           Container(
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: MyApp.primaryOrange,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(6),
             ),
-            child: const Icon(Icons.arrow_forward, color: Colors.white, size: 16),
+            child: Text(
+              time,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+              textAlign: TextAlign.center,
+            ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text.rich(
-              TextSpan(
-                  children: [
-                    TextSpan(
-                      text: '$label ',
-                      style: TextStyle(color: Colors.white.withOpacity(0.8)),
+          const SizedBox(height: 12),
+          // Widget del clima
+          if (weather != null && weather.hasData)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white.withOpacity(0.2)),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'Ahora:',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.7),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
-                    TextSpan(
-                      text: time,
-                      style: const TextStyle(
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _getCupertinoWeatherIcon(weather.weatherText),
                         color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        size: 32,
                       ),
+                      const SizedBox(width: 8),
+                      Text(
+                        weather.temperature,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    weather.weatherText,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 12,
                     ),
-                  ]
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            )
+          else if (_isWeatherLoading)
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
               ),
             ),
-          )
         ],
       ),
     );
+  }
+
+  // Widget del Footer
+  Widget _buildFooter(bool isSmallScreen) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFFD4CFC4), // Color beige/gris del diseño
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 10.0 : 20.0,
+            vertical: isSmallScreen ? 8.0 : 12.0,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'Copyright © 2025 - MMKT GRUPO SURAY - CMO dante@suray.cl',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 20),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.asset(
+                    'assets/insta_icon.png',
+                    width: 32,
+                    height: 32,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                '@buses.suray.cargo',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Función para obtener el ícono del clima de Cupertino
+  IconData _getCupertinoWeatherIcon(String? weatherText) {
+    if (weatherText == null) return CupertinoIcons.question_circle;
+    final lowerCaseText = weatherText.toLowerCase();
+
+    if (lowerCaseText.contains('tormenta') || lowerCaseText.contains('truenos')) {
+      return CupertinoIcons.bolt_fill;
+    } else if (lowerCaseText.contains('lluvia fuerte') || lowerCaseText.contains('aguacero')) {
+      return CupertinoIcons.cloud_heavyrain_fill;
+    } else if (lowerCaseText.contains('aguanieve') || (lowerCaseText.contains('lluvia') && lowerCaseText.contains('nieve'))) {
+      return CupertinoIcons.cloud_sleet_fill;
+    } else if (lowerCaseText.contains('nieve')) {
+      return CupertinoIcons.snow;
+    } else if (lowerCaseText.contains('lluvia') || lowerCaseText.contains('chubasco')) {
+      return CupertinoIcons.cloud_rain_fill;
+    } else if (lowerCaseText.contains('llovizna') || lowerCaseText.contains('garúa')) {
+      return CupertinoIcons.cloud_drizzle_fill;
+    } else if (lowerCaseText.contains('niebla') || lowerCaseText.contains('bruma')) {
+      return CupertinoIcons.cloud_fog_fill;
+    } else if (lowerCaseText.contains('granizo')) {
+      return CupertinoIcons.cloud_hail_fill;
+    } else if (lowerCaseText.contains('viento')) {
+      return CupertinoIcons.wind;
+    } else if (lowerCaseText.contains('algo nublado') || lowerCaseText.contains('parcialmente nublado')) {
+      return CupertinoIcons.cloud_sun_fill;
+    } else if (lowerCaseText.contains('nublado') || lowerCaseText.contains('nubes')) {
+      return CupertinoIcons.cloud_fill;
+    } else if (lowerCaseText.contains('despejado') || lowerCaseText.contains('claro')) {
+      return CupertinoIcons.sun_max_fill;
+    }
+    return CupertinoIcons.cloud;
   }
 }

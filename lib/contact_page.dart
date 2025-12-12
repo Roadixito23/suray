@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'main.dart';
 
 class ContactPage extends StatefulWidget {
@@ -42,6 +44,59 @@ class _ContactPageState extends State<ContactPage>
   void dispose() {
     _animationController.dispose();
     super.dispose();
+  }
+
+  // Función para copiar al portapapeles y llamar
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    // Limpiar el número de teléfono (eliminar espacios)
+    final cleanNumber = phoneNumber.replaceAll(' ', '');
+
+    // Copiar al portapapeles
+    await Clipboard.setData(ClipboardData(text: cleanNumber));
+
+    // Mostrar mensaje de confirmación
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Número $cleanNumber copiado'),
+          duration: const Duration(seconds: 2),
+          backgroundColor: MyApp.primaryOrange,
+        ),
+      );
+    }
+
+    // Intentar abrir el marcador telefónico
+    final Uri phoneUri = Uri(scheme: 'tel', path: cleanNumber);
+    if (await canLaunchUrl(phoneUri)) {
+      await launchUrl(phoneUri);
+    }
+  }
+
+  // Función para copiar email y abrir gestor de correo
+  Future<void> _sendEmail(String email) async {
+    // Copiar al portapapeles
+    await Clipboard.setData(ClipboardData(text: email));
+
+    // Mostrar mensaje de confirmación
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Correo $email copiado'),
+          duration: const Duration(seconds: 2),
+          backgroundColor: MyApp.primaryOrange,
+        ),
+      );
+    }
+
+    // Intentar abrir gestor de correo
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: email,
+      query: 'subject=Consulta desde suray.cl',
+    );
+    if (await canLaunchUrl(emailUri)) {
+      await launchUrl(emailUri);
+    }
   }
 
   @override
@@ -186,6 +241,7 @@ class _ContactPageState extends State<ContactPage>
                               content: 'suray.ltda@gmail.com',
                               color: MyApp.primaryOrange,
                               delay: 200,
+                              onTap: () => _sendEmail('suray.ltda@gmail.com'),
                             ),
 
                             _buildLocationSection(),
@@ -266,93 +322,104 @@ class _ContactPageState extends State<ContactPage>
     required String content,
     required Color color,
     int delay = 0,
+    VoidCallback? onTap,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: AnimatedContainer(
         duration: Duration(milliseconds: 600 + delay),
         curve: Curves.easeOutCubic,
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: MyApp.surfaceWhite,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.1),
-                blurRadius: 15,
-                offset: const Offset(0, 3),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: MyApp.surfaceWhite,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.1),
+                  blurRadius: 15,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+              border: Border.all(
+                color: color.withOpacity(0.2),
+                width: 1,
               ),
-            ],
-            border: Border.all(
-              color: color.withOpacity(0.2),
-              width: 1,
             ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [color, color.withOpacity(0.8)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [color, color.withOpacity(0.8)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  child: Icon(icon, color: Colors.white, size: 24),
                 ),
-                child: Icon(icon, color: Colors.white, size: 24),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: color,
-                        fontWeight: FontWeight.w500,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: MyApp.lightGreyBackground,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: MyApp.borderColor,
-                          width: 1,
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: color,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      child: Text(
-                        content,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: MyApp.darkTextColor,
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: MyApp.lightGreyBackground,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: MyApp.borderColor,
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          content,
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: MyApp.darkTextColor,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                if (onTap != null)
+                  Icon(
+                    Icons.touch_app_rounded,
+                    color: color.withOpacity(0.5),
+                    size: 24,
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -510,20 +577,43 @@ class _ContactPageState extends State<ContactPage>
                   info.address,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(Icons.phone_rounded,
-                        size: 14,
-                        color: MyApp.lightTextColor),
-                    const SizedBox(width: 4),
-                    Text(
-                      info.phone,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () => _makePhoneCall(info.phone),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: color.withOpacity(0.3),
+                        width: 1,
                       ),
                     ),
-                  ],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.phone_rounded,
+                            size: 16,
+                            color: color),
+                        const SizedBox(width: 6),
+                        Text(
+                          info.phone,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: color,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Icon(
+                          Icons.touch_app_rounded,
+                          size: 14,
+                          color: color.withOpacity(0.5),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),

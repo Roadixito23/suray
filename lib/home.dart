@@ -191,6 +191,23 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  String _formatTimeWithSuffix(String time) {
+    try {
+      final parts = time.split(':');
+      final hour = int.parse(parts[0]);
+
+      // 00:00 a 11:59 -> a.m.
+      // 12:00 a 23:59 -> hrs.
+      if (hour >= 0 && hour < 12) {
+        return "$time a.m.";
+      } else {
+        return "$time hrs.";
+      }
+    } catch (e) {
+      return time; // Si hay error, devolver sin sufijo
+    }
+  }
+
   String? _findNextDepartureFromLists(List<String> todayTimes, List<String> tomorrowTimes) {
     final referenceTime = DateTime.now();
     DateTime? _parseTime(String time, DateTime ref) {
@@ -201,9 +218,13 @@ class _HomePageState extends State<HomePage> {
     }
     for (final time in todayTimes) {
       final departureTime = _parseTime(time, referenceTime);
-      if (departureTime != null && departureTime.isAfter(referenceTime)) return time;
+      if (departureTime != null && departureTime.isAfter(referenceTime)) {
+        return "Hoy a las ${_formatTimeWithSuffix(time)}";
+      }
     }
-    if (tomorrowTimes.isNotEmpty) return "Mañana a las ${tomorrowTimes.first}";
+    if (tomorrowTimes.isNotEmpty) {
+      return "Mañana a las ${_formatTimeWithSuffix(tomorrowTimes.first)}";
+    }
     return null;
   }
 
@@ -344,8 +365,8 @@ class _HomePageState extends State<HomePage> {
                                 );
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: MyApp.primaryOrange,
-                                foregroundColor: Colors.white,
+                                backgroundColor: Colors.black,
+                                foregroundColor: MyApp.primaryOrange,
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                 minimumSize: const Size(double.infinity, 50),
@@ -400,6 +421,8 @@ class _HomePageState extends State<HomePage> {
     final dayName = _getDayName(now.weekday);
     final dayNumber = now.day;
     final monthAbbr = _getMonthAbbreviation(now.month);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 400;
     Color cardColor = _isTodayHoliday
         ? MyApp.errorColor.withOpacity(0.9)
         : MyApp.primaryNavy.withOpacity(0.9);
@@ -427,11 +450,11 @@ class _HomePageState extends State<HomePage> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Center(
+          Center(
             child: Text(
               'HORARIOS',
               style: TextStyle(
-                fontSize: 26,
+                fontSize: isSmallScreen ? 22 : 26,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
                 fontFamily: 'Hemiheads',
@@ -452,31 +475,42 @@ class _HomePageState extends State<HomePage> {
                 child: Icon(dayIcon, color: Colors.white, size: 20),
               ),
               const SizedBox(width: 12),
-              Text(
-                _isTodayHoliday
-                    ? 'Hoy es Feriado: $_todayHolidayName'
-                    : 'Hoy es $dayName $dayNumber de $monthAbbr',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              Flexible(
+                child: Text(
+                  _isTodayHoliday
+                      ? 'Hoy es Feriado: $_todayHolidayName'
+                      : 'Hoy es $dayName $dayNumber de $monthAbbr',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 12 : 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
                 ),
-                textAlign: TextAlign.center,
               ),
             ],
           ),
           const SizedBox(height: 12),
           const Divider(color: Colors.white24, height: 24),
-          const Center(
-            child: Text(
-              'Próximas Salidas:',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                fontFamily: 'Hemiheads',
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: MyApp.primaryOrange,
+                borderRadius: BorderRadius.circular(8),
               ),
-              textAlign: TextAlign.center,
+              child: Text(
+                'Próximas Salidas:',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 16 : 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontFamily: 'Hemiheads',
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -493,19 +527,22 @@ class _HomePageState extends State<HomePage> {
               ),
             ))
           else
-            Row(
-              children: [
-                if (_nextAysenDeparture != null)
-                  Expanded(
-                    child: _buildDepartureInfoColumn('Desde Aysén', _nextAysenDeparture!, _puertoAysenWeather),
-                  ),
-                if (_nextAysenDeparture != null && _nextCoyhaiqueDeparture != null)
-                  const SizedBox(width: 12),
-                if (_nextCoyhaiqueDeparture != null)
-                  Expanded(
-                    child: _buildDepartureInfoColumn('Desde Coyhaique', _nextCoyhaiqueDeparture!, _coyhaqueWeather),
-                  ),
-              ],
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_nextAysenDeparture != null)
+                    Expanded(
+                      child: _buildDepartureInfoColumn('Desde Aysén', _nextAysenDeparture!, _puertoAysenWeather),
+                    ),
+                  if (_nextAysenDeparture != null && _nextCoyhaiqueDeparture != null)
+                    const SizedBox(width: 12),
+                  if (_nextCoyhaiqueDeparture != null)
+                    Expanded(
+                      child: _buildDepartureInfoColumn('Desde Coyhaique', _nextCoyhaiqueDeparture!, _coyhaqueWeather),
+                    ),
+                ],
+              ),
             )
         ],
       ),
@@ -513,6 +550,28 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildDepartureInfoColumn(String city, String time, CompactWeatherData? weather) {
+    // Lógica para separar "Hoy/Mañana", "a las" y la hora para mejor control del layout
+    List<Widget> timeWidgets = [];
+    if (time.contains(' a las ')) {
+      final parts = time.split(' a las ');
+      timeWidgets = [
+        Text(parts[0], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4.0),
+          child: Text("a las", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+        ),
+        Text(parts[1], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+      ];
+    } else {
+      timeWidgets = [
+        Text(
+          time,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+          textAlign: TextAlign.center,
+        )
+      ];
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -521,7 +580,7 @@ class _HomePageState extends State<HomePage> {
         border: Border.all(color: Colors.white.withOpacity(0.2)),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
         children: [
           Text(
             city,
@@ -534,22 +593,21 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 8),
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: MyApp.primaryOrange,
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Text(
-              time,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-              textAlign: TextAlign.center,
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 4,
+              runSpacing: 4,
+              children: timeWidgets,
             ),
           ),
           const SizedBox(height: 12),
+          const Spacer(),
           // Widget del clima
           if (weather != null && weather.hasData)
             Container(

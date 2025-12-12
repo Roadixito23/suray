@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'contact_page.dart';
 import 'schedules_page.dart';
 import 'main.dart';
@@ -622,6 +623,14 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // Función para abrir Instagram
+  Future<void> _openInstagram() async {
+    final Uri url = Uri.parse('https://www.instagram.com/buses.suray.cargo?igsh=azU1Z2MxbGZiMTZr');
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      debugPrint('No se pudo abrir la URL: $url');
+    }
+  }
+
   // Widget del Footer
   Widget _buildFooter(bool isSmallScreen) {
     return Container(
@@ -655,29 +664,39 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               const SizedBox(width: 20),
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.asset(
-                    'assets/insta_icon.png',
-                    width: 32,
-                    height: 32,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              const Text(
-                '@buses.suray.cargo',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+              // Área clickeable para Instagram
+              InkWell(
+                onTap: _openInstagram,
+                borderRadius: BorderRadius.circular(8),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.asset(
+                          'assets/insta_icon.png',
+                          width: 32,
+                          height: 32,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      '@buses.suray.cargo',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

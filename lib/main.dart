@@ -31,6 +31,14 @@ class MyApp extends StatelessWidget {
   static const Color warningColor = Color(0xFFF59E0B); // Amarillo para advertencias
   static const Color errorColor = Color(0xFFEF4444); // Rojo para errores
 
+  // Colores para horarios por tipo de día
+  static const Color weekdayMint = Color(0xFF06D6A0); // Verde menta para días laborales
+  static const Color weekdayMintDark = Color(0xFF05B287); // Verde menta oscuro
+  static const Color saturdayOrange = Color(0xFFFFB703); // Naranja dorado para sábados
+  static const Color saturdayOrangeDark = Color(0xFFFB8500); // Naranja dorado oscuro
+  static const Color sundayRed = Color(0xFFEF476F); // Rojo coral para domingos/feriados
+  static const Color sundayRedDark = Color(0xFFD62246); // Rojo coral oscuro
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(

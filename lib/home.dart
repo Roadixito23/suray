@@ -260,9 +260,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isSmallScreen = screenWidth < 400;
-
     return Scaffold(
       body: SelectionArea(
         child: Stack(
@@ -304,36 +301,19 @@ class _HomePageState extends State<HomePage> {
                   // AppBar fija en la parte superior
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-                    child: isSmallScreen
-                        ? Column(
-                            children: [
-                              Center(
-                                child: Image.asset('assets/logo.png', height: 50, fit: BoxFit.contain),
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  _buildHeroNavButton('Contacto', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContactPage()))),
-                                  const SizedBox(width: 10),
-                                  _buildHeroNavButton('Nuestra Ruta', () {}), // Deshabilitado temporalmente
-                                ],
-                              ),
-                            ],
-                          )
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Image.asset('assets/logo.png', height: 80, fit: BoxFit.contain),
-                              Row(
-                                children: [
-                                  _buildHeroNavButton('Contacto', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContactPage()))),
-                                  const SizedBox(width: 10),
-                                  _buildHeroNavButton('Nuestra Ruta', () {}), // Deshabilitado temporalmente
-                                ],
-                              ),
-                            ],
-                          ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Image.asset('assets/logo.png', height: 80, fit: BoxFit.contain),
+                        Row(
+                          children: [
+                            _buildHeroNavButton('Contacto', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContactPage()))),
+                            const SizedBox(width: 10),
+                            _buildHeroNavButton('Nuestra Ruta', () {}), // Deshabilitado temporalmente
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
 
                   // Contenido principal con scroll si es necesario
@@ -389,7 +369,7 @@ class _HomePageState extends State<HomePage> {
               bottom: 0,
               left: 0,
               right: 0,
-              child: _buildFooter(isSmallScreen),
+              child: _buildFooter(),
             ),
           ],
         ),
@@ -421,8 +401,6 @@ class _HomePageState extends State<HomePage> {
     final dayName = _getDayName(now.weekday);
     final dayNumber = now.day;
     final monthAbbr = _getMonthAbbreviation(now.month);
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isSmallScreen = screenWidth < 400;
     Color cardColor = _isTodayHoliday
         ? MyApp.errorColor.withOpacity(0.9)
         : MyApp.primaryNavy.withOpacity(0.9);
@@ -454,7 +432,7 @@ class _HomePageState extends State<HomePage> {
             child: Text(
               'HORARIOS',
               style: TextStyle(
-                fontSize: isSmallScreen ? 22 : 26,
+                fontSize: 26,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
                 fontFamily: 'Hemiheads',
@@ -481,7 +459,7 @@ class _HomePageState extends State<HomePage> {
                       ? 'Hoy es Feriado: $_todayHolidayName'
                       : 'Hoy es $dayName $dayNumber de $monthAbbr',
                   style: TextStyle(
-                    fontSize: isSmallScreen ? 12 : 16,
+                    fontSize: 19,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -504,7 +482,7 @@ class _HomePageState extends State<HomePage> {
               child: Text(
                 'Próximas Salidas:',
                 style: TextStyle(
-                  fontSize: isSmallScreen ? 16 : 20,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                   fontFamily: 'Hemiheads',
@@ -586,7 +564,7 @@ class _HomePageState extends State<HomePage> {
             city,
             style: TextStyle(
               color: Colors.white.withOpacity(0.8),
-              fontSize: 18,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
             textAlign: TextAlign.center,
@@ -683,7 +661,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // Widget del Footer
-  Widget _buildFooter(bool isSmallScreen) {
+  Widget _buildFooter() {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -700,8 +678,8 @@ class _HomePageState extends State<HomePage> {
         scrollDirection: Axis.horizontal,
         child: Padding(
           padding: EdgeInsets.symmetric(
-            horizontal: isSmallScreen ? 10.0 : 20.0,
-            vertical: isSmallScreen ? 8.0 : 12.0,
+            horizontal: 20.0,
+            vertical: 12.0,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

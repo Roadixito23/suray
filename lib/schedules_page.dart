@@ -473,6 +473,8 @@ class _SchedulesPageState extends State<SchedulesPage> {
                   'lunesViernes',
                   'weekdays',
                   Icons.work_rounded,
+                  primaryColor: MyApp.weekdayMint,
+                  darkColor: MyApp.weekdayMintDark,
                   fontSize: baseFontSize,
                   chipPadding: chipPadding,
                 ),
@@ -484,6 +486,8 @@ class _SchedulesPageState extends State<SchedulesPage> {
                   'sabados',
                   'saturday',
                   Icons.weekend_rounded,
+                  primaryColor: MyApp.saturdayOrange,
+                  darkColor: MyApp.saturdayOrangeDark,
                   fontSize: baseFontSize,
                   chipPadding: chipPadding,
                 ),
@@ -495,6 +499,8 @@ class _SchedulesPageState extends State<SchedulesPage> {
                   'domingosFeriados',
                   'sunday_holidays',
                   Icons.celebration_rounded,
+                  primaryColor: MyApp.sundayRed,
+                  darkColor: MyApp.sundayRedDark,
                   fontSize: baseFontSize,
                   chipPadding: chipPadding,
                 ),
@@ -507,7 +513,7 @@ class _SchedulesPageState extends State<SchedulesPage> {
   }
 
   // Nuevo método para construir sección por día con dos ciudades lado a lado
-  Widget _buildDaySection(String dayTitle, String dayCollection, String tableType, IconData icon, {double fontSize = 14.0, double chipPadding = 16.0}) {
+  Widget _buildDaySection(String dayTitle, String dayCollection, String tableType, IconData icon, {required Color primaryColor, required Color darkColor, double fontSize = 14.0, double chipPadding = 16.0}) {
     return Container(
       decoration: BoxDecoration(
         color: MyApp.surfaceWhite,
@@ -532,7 +538,7 @@ class _SchedulesPageState extends State<SchedulesPage> {
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [MyApp.primaryOrange, MyApp.deepOrange],
+                colors: [primaryColor, darkColor],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
               ),

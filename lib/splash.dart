@@ -21,8 +21,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   late Animation<double> _scaleAnimation;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _logoRotationAnimation;
-  late Animation<double> _textFadeAnimation;
-  late Animation<Offset> _textSlideAnimation;
   late Animation<double> _floatingAnimation;
   late Animation<Color?> _neonColorAnimation;
 
@@ -92,21 +90,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     ).animate(CurvedAnimation(
       parent: _animationController,
       curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
-    ));
-
-    // Animación de fade para el texto
-    _textFadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: const Interval(0.5, 1.0, curve: Curves.easeIn),
-    );
-
-    // Animación de slide para el texto
-    _textSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.5),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: const Interval(0.5, 1.0, curve: Curves.easeOutCubic),
     ));
 
     // Controlador para animación de flotación
@@ -638,54 +621,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                       ),
                     ),
                   ),
-                ),
-              ),
-            ),
-
-            // Información inferior: Desarrollador y Versión
-            Positioned(
-              bottom: 20,
-              left: 0,
-              right: 0,
-              child: FadeTransition(
-                opacity: _textFadeAnimation,
-                child: Column(
-                  children: [
-                    // Developed by
-                    Text(
-                      'Developed by:',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.5),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w400,
-                        letterSpacing: 0.5,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 4),
-                    // Email del desarrollador
-                    Text(
-                      'dante@suray.cl',
-                      style: TextStyle(
-                        color: MyApp.primaryOrange.withValues(alpha: 0.9),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    // Versión
-                    Text(
-                      'v12.12.25',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.5),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
                 ),
               ),
             ),

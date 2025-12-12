@@ -278,96 +278,89 @@ class _HomePageState extends State<HomePage> {
             // 3. Contenido de la UI
             SafeArea(
               bottom: false, // No aplicar padding inferior para que el footer esté pegado al borde
-              // INICIO DE LA MODIFICACIÓN: Se añade SingleChildScrollView para scroll vertical
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 20.0, right: 20.0, top: 10.0, bottom: 70.0),
-                  child: Column(
-                    children: [
-                      // --- Fila Superior Adaptativa ---
-                      LayoutBuilder(
-                          builder: (context, constraints) {
-                            if (isSmallScreen) {
-                              // VISTA PARA PANTALLAS PEQUEÑAS (VERTICAL)
-                              return Column(
+              child: Column(
+                children: [
+                  // AppBar fija en la parte superior
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+                    child: isSmallScreen
+                        ? Column(
+                            children: [
+                              Center(
+                                child: Image.asset('assets/logo.png', height: 50, fit: BoxFit.contain),
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Center(
-                                    child: Image.asset('assets/logo.png', height: 60, fit: BoxFit.contain),
-                                  ),
-                                  const SizedBox(height: 15),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      _buildHeroNavButton('Contacto', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContactPage()))),
-                                      const SizedBox(width: 10),
-                                      _buildHeroNavButton('Nuestra Ruta', () {}), // Deshabilitado temporalmente
-                                    ],
-                                  ),
+                                  _buildHeroNavButton('Contacto', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContactPage()))),
+                                  const SizedBox(width: 10),
+                                  _buildHeroNavButton('Nuestra Ruta', () {}), // Deshabilitado temporalmente
                                 ],
-                              );
-                            } else {
-                              // VISTA PARA PANTALLAS GRANDES (HORIZONTAL - ORIGINAL)
-                              return Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              ),
+                            ],
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Image.asset('assets/logo.png', height: 80, fit: BoxFit.contain),
+                              Row(
                                 children: [
-                                  Image.asset('assets/logo.png', height: 100, fit: BoxFit.contain),
-                                  Row(
-                                    children: [
-                                      _buildHeroNavButton('Contacto', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContactPage()))),
-                                      const SizedBox(width: 10),
-                                      _buildHeroNavButton('Nuestra Ruta', () {}), // Deshabilitado temporalmente
-                                    ],
-                                  ),
+                                  _buildHeroNavButton('Contacto', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContactPage()))),
+                                  const SizedBox(width: 10),
+                                  _buildHeroNavButton('Nuestra Ruta', () {}), // Deshabilitado temporalmente
                                 ],
-                              );
-                            }
-                          }
-                      ),
+                              ),
+                            ],
+                          ),
+                  ),
 
-                      // INICIO DE LA MODIFICACIÓN: Se reemplaza Spacer por SizedBox
-                      const SizedBox(height: 30),
+                  // Contenido principal con scroll si es necesario
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 20.0, right: 20.0, bottom: 70.0),
+                        child: Column(
+                          children: [
+                            // Tarjeta de Información del Día
+                            _buildCurrentDayInfo(),
 
+                            const SizedBox(height: 20),
 
-                      // INICIO DE LA MODIFICACIÓN: Se reemplaza Spacer por SizedBox
-                      const SizedBox(height: 40),
-
-                      // Tarjeta de Información del Día
-                      _buildCurrentDayInfo(),
-
-                      const SizedBox(height: 20),
-
-                      // Botón de Horarios
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.calendar_month_outlined),
-                        label: const Text('VER HORARIOS COMPLETOS'),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => SchedulesPage(
-                              firestore: _firestore,
-                              holidays: _holidays,
-                              nextAysenDeparture: _nextAysenDeparture,
-                              nextCoyhaiqueDeparture: _nextCoyhaiqueDeparture,
-                              currentDayCollection: _currentDayCollection,
-                            )),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: MyApp.primaryOrange,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          elevation: 3,
-                          shadowColor: MyApp.primaryOrange.withOpacity(0.4),
+                            // Botón de Horarios
+                            ElevatedButton.icon(
+                              icon: const Icon(Icons.calendar_month_outlined),
+                              label: const Text('VER HORARIOS COMPLETOS'),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => SchedulesPage(
+                                    firestore: _firestore,
+                                    holidays: _holidays,
+                                    nextAysenDeparture: _nextAysenDeparture,
+                                    nextCoyhaiqueDeparture: _nextCoyhaiqueDeparture,
+                                    currentDayCollection: _currentDayCollection,
+                                  )),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: MyApp.primaryOrange,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                minimumSize: const Size(double.infinity, 50),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                elevation: 3,
+                                shadowColor: MyApp.primaryOrange.withOpacity(0.4),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-              // FIN DE LA MODIFICACIÓN
             ),
 
             // 4. Footer siempre visible en la parte inferior

@@ -16,7 +16,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // --- Estado y Lógica de Horarios (existente) ---
   late final FirebaseFirestore _firestore;
   final List<StreamSubscription> _streamSubscriptions = [];
   List<String> _aysenTodayTimes = [];
@@ -31,14 +30,12 @@ class _HomePageState extends State<HomePage> {
   String? _todayHolidayName;
   String? _currentDayCollection;
 
-  // --- NUEVO: Estado y Lógica del Clima ---
   late final DualWeatherService _weatherService;
   Timer? _weatherUpdateTimer;
   CompactWeatherData? _coyhaqueWeather;
   CompactWeatherData? _puertoAysenWeather;
   bool _isWeatherLoading = true;
 
-  // --- Lógica para el carrusel de imágenes (existente) ---
   final List<String> _panelImages = [
     'assets/home_panels/tunel.png',
     'assets/home_panels/aysen.png',
@@ -51,15 +48,13 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _firestore = FirebaseFirestore.instance;
-    _weatherService = DualWeatherService(); // Nuevo
+    _weatherService = DualWeatherService();
 
-    // Inicializar lógica de horarios (existente)
     _initializeScheduleListeners();
     _timeContextTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
       _recalculateAndSetDepartures();
     });
 
-    // NUEVO: Inicializar lógica del clima
     _initializeWeather();
     _weatherUpdateTimer = Timer.periodic(const Duration(minutes: 10), (timer) {
       _updateWeatherData();
@@ -660,7 +655,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Widget del Footer
   Widget _buildFooter() {
     return Container(
       width: double.infinity,

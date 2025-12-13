@@ -1,13 +1,6 @@
-import 'dart:async';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:universal_html/html.dart' as html;
 import 'main.dart';
-import 'schedule_image_generator.dart';
-import 'dart:typed_data';
 
 class SchedulesPage extends StatefulWidget {
   final FirebaseFirestore firestore;
@@ -30,50 +23,12 @@ class SchedulesPage extends StatefulWidget {
 }
 
 class _SchedulesPageState extends State<SchedulesPage> {
-  bool _isLoadingImage = false;
-
-  // Cache para los horarios actuales
-  Map<String, List<String>>? _cachedAysenSchedules;
-  Map<String, List<String>>? _cachedCoyhaiqueSchedules;
-  bool _isDataFresh = false;
+  // Nivel de zoom (0.6 = 60%, 1.1 = 110%)
+  double _zoomLevel = 1.0;
 
   @override
   void initState() {
     super.initState();
-    _refreshScheduleData();
-  }
-
-  // --- MÉTODO PARA REFRESCAR DATOS ---
-  Future<void> _refreshScheduleData() async {
-    try {
-      // Forzar recarga de datos desde Firebase
-      final aysenSchedules = {
-        'lunesViernes': await _timesStream('aysen', 'lunesViernes').first,
-        'sabados': await _timesStream('aysen', 'sabados').first,
-        'domingosFeriados': await _timesStream('aysen', 'domingosFeriados').first,
-      };
-      final coyhaiqueSchedules = {
-        'lunesViernes': await _timesStream('coyhaique', 'lunesViernes').first,
-        'sabados': await _timesStream('coyhaique', 'sabados').first,
-        'domingosFeriados': await _timesStream('coyhaique', 'domingosFeriados').first,
-      };
-
-      setState(() {
-        _cachedAysenSchedules = aysenSchedules;
-        _cachedCoyhaiqueSchedules = coyhaiqueSchedules;
-        _isDataFresh = true;
-      });
-    } catch (e) {
-      print('Error refrescando datos: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al cargar horarios: $e'),
-            backgroundColor: MyApp.errorColor,
-          ),
-        );
-      }
-    }
   }
 
   // --- STREAMS HELPER ---
@@ -85,254 +40,6 @@ class _SchedulesPageState extends State<SchedulesPage> {
         .orderBy('time')
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) => doc.data()['time'] as String).toList());
-  }
-
-  // --- NUEVA LÓGICA PARA DESCARGAR LA IMAGEN (MEJORADA) ---
-  Future<void> _downloadSchedules() async {
-    setState(() {
-      _isLoadingImage = true;
-    });
-
-    try {
-      // 1. Refrescar datos antes de generar imagen
-      await _refreshScheduleData();
-
-      if (!_isDataFresh || _cachedAysenSchedules == null || _cachedCoyhaiqueSchedules == null) {
-        throw Exception('No se pudieron cargar los horarios actualizados');
-      }
-
-      // 2. Crear el widget de imagen dinámicamente
-      final scheduleWidget = ScheduleImageGenerator(
-        aysenSchedules: _cachedAysenSchedules!,
-        coyhaiqueSchedules: _cachedCoyhaiqueSchedules!,
-      ).buildScheduleImage();
-
-      // 3. Renderizar el widget a imagen usando método mejorado
-      final pngBytes = await _renderWidgetToImage(scheduleWidget);
-
-      // 4. Descargar según la plataforma
-      if (kIsWeb) {
-        _downloadForWeb(pngBytes);
-      } else {
-        await _downloadForMobile(pngBytes);
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 8),
-                Text('¡Horarios descargados exitosamente!'),
-              ],
-            ),
-            backgroundColor: MyApp.successColor,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-
-    } catch (e, stackTrace) {
-      print('Error generando imagen: $e');
-      print('StackTrace completo: $stackTrace');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Error al generar imagen',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text('$e', style: const TextStyle(fontSize: 12)),
-              ],
-            ),
-            backgroundColor: MyApp.errorColor,
-            duration: const Duration(seconds: 6),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingImage = false;
-        });
-      }
-    }
-  }
-
-  // --- MÉTODO PARA RENDERIZAR WIDGET A IMAGEN (MEJORADO Y ROBUSTO) ---
-  Future<Uint8List> _renderWidgetToImage(Widget widget) async {
-    final GlobalKey globalKey = GlobalKey();
-    OverlayEntry? overlayEntry;
-
-    try {
-      print('Iniciando renderizado de widget a imagen...');
-
-      // Crear un widget temporal que muestre nuestro contenido
-      final widgetToRender = RepaintBoundary(
-        key: globalKey,
-        child: MediaQuery(
-          data: const MediaQueryData(
-            size: Size(1200, 800),
-            devicePixelRatio: 2.0,
-          ),
-          child: Directionality(
-            textDirection: TextDirection.ltr,
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                width: 1200,
-                height: 800,
-                color: Colors.white,
-                child: widget,
-              ),
-            ),
-          ),
-        ),
-      );
-
-      final completer = Completer<Uint8List>();
-
-      // Verificar que el contexto y overlay estén disponibles
-      if (!mounted) {
-        throw Exception('Widget no está montado');
-      }
-
-      print('Buscando overlay...');
-      final overlay = Overlay.of(context, rootOverlay: true);
-
-      overlayEntry = OverlayEntry(
-        builder: (context) => Positioned(
-          left: -5000,
-          top: -5000,
-          child: widgetToRender,
-        ),
-      );
-
-      print('Insertando overlay...');
-      overlay.insert(overlayEntry);
-
-      // Esperar múltiples frames para asegurar renderizado completo
-      await Future.delayed(const Duration(milliseconds: 100));
-
-      print('Esperando post-frame callback...');
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        try {
-          print('Dentro del post-frame callback, esperando renderizado...');
-
-          // Esperar renderizado completo con más tiempo
-          await Future.delayed(const Duration(milliseconds: 1000));
-
-          print('Buscando RenderObject...');
-          final RenderObject? renderObject = globalKey.currentContext?.findRenderObject();
-
-          if (renderObject == null) {
-            throw Exception('No se pudo encontrar el RenderObject - el widget no se renderizó correctamente');
-          }
-
-          if (renderObject is! RenderRepaintBoundary) {
-            throw Exception('El RenderObject no es un RepaintBoundary (es ${renderObject.runtimeType})');
-          }
-
-          final boundary = renderObject;
-          print('RepaintBoundary encontrado correctamente');
-
-          // Intentar múltiples veces si necesita repintado
-          int attempts = 0;
-          while (boundary.debugNeedsPaint && attempts < 10) {
-            print('Esperando repintado (intento ${attempts + 1})...');
-            await Future.delayed(const Duration(milliseconds: 300));
-            attempts++;
-          }
-
-          if (boundary.debugNeedsPaint) {
-            print('Advertencia: El boundary aún necesita repintado después de 10 intentos');
-          }
-
-          print('Capturando imagen...');
-          final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
-          print('Imagen capturada: ${image.width}x${image.height}');
-
-          print('Convirtiendo a bytes...');
-          final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-
-          if (byteData == null) {
-            throw Exception('No se pudo convertir la imagen a bytes - toByteData retornó null');
-          }
-
-          print('Imagen convertida exitosamente: ${byteData.lengthInBytes} bytes');
-
-          if (!completer.isCompleted) {
-            completer.complete(byteData.buffer.asUint8List());
-          }
-        } catch (e, stackTrace) {
-          print('ERROR en callback de renderizado: $e');
-          print('StackTrace del callback: $stackTrace');
-          if (!completer.isCompleted) {
-            completer.completeError(e, stackTrace);
-          }
-        }
-      });
-
-      print('Esperando resultado del completer...');
-      // Timeout de 20 segundos para producción
-      final result = await completer.future.timeout(
-        const Duration(seconds: 20),
-        onTimeout: () {
-          throw TimeoutException('Timeout al generar la imagen después de 20 segundos');
-        },
-      );
-
-      print('Imagen generada exitosamente');
-      return result;
-
-    } catch (e, stackTrace) {
-      print('ERROR GENERAL en _renderWidgetToImage: $e');
-      print('StackTrace completo: $stackTrace');
-      rethrow;
-    } finally {
-      // Asegurar limpieza del overlay
-      if (overlayEntry != null) {
-        try {
-          print('Removiendo overlay...');
-          overlayEntry.remove();
-          overlayEntry = null;
-        } catch (e) {
-          print('Error al remover overlay: $e');
-        }
-      }
-    }
-  }
-
-  // --- DESCARGA PARA WEB ---
-  void _downloadForWeb(Uint8List pngBytes) {
-    try {
-      print('Iniciando descarga web...');
-
-      // Formatear fecha como ddmmaa
-      final now = DateTime.now();
-      final formattedDate = '${now.day.toString().padLeft(2, '0')}${now.month.toString().padLeft(2, '0')}${now.year.toString().substring(2)}';
-
-      final blob = html.Blob([pngBytes]);
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      final anchor = html.AnchorElement(href: url)
-        ..setAttribute('download', 'Horarios Buses Suray ($formattedDate).png')
-        ..click();
-      html.Url.revokeObjectUrl(url);
-
-      print('Descarga web completada');
-    } catch (e) {
-      print('Error en descarga web: $e');
-      rethrow;
-    }
-  }
-
-  // --- DESCARGA PARA MÓVILES ---
-  Future<void> _downloadForMobile(Uint8List pngBytes) async {
-    throw UnimplementedError('Descarga para móviles no implementada en esta versión web');
   }
 
   // --- MÉTODOS HELPER (sin cambios) ---
@@ -353,7 +60,7 @@ class _SchedulesPageState extends State<SchedulesPage> {
   }
 
   bool _shouldHighlightInThisTable(String tableType, String nextDeparture) {
-    if (nextDeparture.contains('(mañana)')) {
+    if (nextDeparture.toLowerCase().contains('mañana')) {
       final tomorrow = DateTime.now().add(const Duration(days: 1));
       return tableType == _getTableIdentifier(_getDayCollection(tomorrow));
     }
@@ -375,7 +82,7 @@ class _SchedulesPageState extends State<SchedulesPage> {
     return Scaffold(
       backgroundColor: MyApp.lightGreyBackground,
       appBar: AppBar(
-        title: const Text('Horarios Completos'),
+        title: const Text('Horarios'),
         backgroundColor: MyApp.primaryNavy,
         elevation: 0,
         leading: Container(
@@ -389,62 +96,68 @@ class _SchedulesPageState extends State<SchedulesPage> {
             onPressed: () => Navigator.pop(context),
           ),
         ),
-        actions: [
-          // Botón de refrescar
-          Container(
-            margin: const EdgeInsets.only(right: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.refresh, color: Colors.white),
-              onPressed: _refreshScheduleData,
-              tooltip: 'Actualizar horarios',
-            ),
-          ),
-        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60.0),
           child: Container(
             color: Colors.white.withOpacity(0.1),
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Column(
-              children: [
-                // Botón principal de descarga
-                ElevatedButton.icon(
-                  onPressed: _isLoadingImage ? null : _downloadSchedules,
-                  icon: _isLoadingImage
-                      ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                      : const Icon(Icons.download_rounded),
-                  label: Text(_isLoadingImage ? 'Generando imagen...' : 'Descargar Horarios'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: MyApp.primaryOrange,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: MyApp.primaryOrange,
+                borderRadius: BorderRadius.circular(25),
+                boxShadow: [
+                  BoxShadow(
+                    color: MyApp.primaryOrange.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
-                ),
-                // Indicador de estado de datos
-                if (!_isDataFresh)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Botón zoom out
+                  IconButton(
+                    icon: const Icon(Icons.zoom_out, color: Colors.white),
+                    onPressed: _zoomLevel > 0.6 ? () {
+                      setState(() {
+                        _zoomLevel = (_zoomLevel - 0.1).clamp(0.6, 1.1);
+                      });
+                    } : null,
+                    tooltip: 'Alejar',
+                  ),
+                  const SizedBox(width: 8),
+                  // Indicador de zoom
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Text(
-                      'Actualizando datos...',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
-                        fontSize: 12,
+                      '${(_zoomLevel * 100).round()}%',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
                       ),
                     ),
                   ),
-              ],
+                  const SizedBox(width: 8),
+                  // Botón zoom in
+                  IconButton(
+                    icon: const Icon(Icons.zoom_in, color: Colors.white),
+                    onPressed: _zoomLevel < 1.1 ? () {
+                      setState(() {
+                        _zoomLevel = (_zoomLevel + 0.1).clamp(0.6, 1.1);
+                      });
+                    } : null,
+                    tooltip: 'Acercar',
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -465,46 +178,49 @@ class _SchedulesPageState extends State<SchedulesPage> {
           ),
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                // Sección Lunes a Viernes
-                _buildDaySection(
-                  'Lunes a Viernes',
-                  'lunesViernes',
-                  'weekdays',
-                  Icons.work_rounded,
-                  primaryColor: MyApp.weekdayMint,
-                  darkColor: MyApp.weekdayMintDark,
-                  fontSize: baseFontSize,
-                  chipPadding: chipPadding,
-                ),
-                const SizedBox(height: 24),
+            child: Transform.scale(
+              scale: _zoomLevel,
+              child: Column(
+                children: [
+                  // Sección Lunes a Viernes
+                  _buildDaySection(
+                    'Lunes a Viernes',
+                    'lunesViernes',
+                    'weekdays',
+                    Icons.work_rounded,
+                    primaryColor: MyApp.weekdayMint,
+                    darkColor: MyApp.weekdayMintDark,
+                    fontSize: baseFontSize,
+                    chipPadding: chipPadding,
+                  ),
+                  const SizedBox(height: 24),
 
-                // Sección Sábados
-                _buildDaySection(
-                  'Sábados',
-                  'sabados',
-                  'saturday',
-                  Icons.weekend_rounded,
-                  primaryColor: MyApp.saturdayOrange,
-                  darkColor: MyApp.saturdayOrangeDark,
-                  fontSize: baseFontSize,
-                  chipPadding: chipPadding,
-                ),
-                const SizedBox(height: 24),
+                  // Sección Sábados
+                  _buildDaySection(
+                    'Sábados',
+                    'sabados',
+                    'saturday',
+                    Icons.weekend_rounded,
+                    primaryColor: MyApp.saturdayOrange,
+                    darkColor: MyApp.saturdayOrangeDark,
+                    fontSize: baseFontSize,
+                    chipPadding: chipPadding,
+                  ),
+                  const SizedBox(height: 24),
 
-                // Sección Domingo o Feriado
-                _buildDaySection(
-                  'Domingo o Feriado',
-                  'domingosFeriados',
-                  'sunday_holidays',
-                  Icons.celebration_rounded,
-                  primaryColor: MyApp.sundayRed,
-                  darkColor: MyApp.sundayRedDark,
-                  fontSize: baseFontSize,
-                  chipPadding: chipPadding,
-                ),
-              ],
+                  // Sección Domingo o Feriado
+                  _buildDaySection(
+                    'Domingo o Feriado',
+                    'domingosFeriados',
+                    'sunday_holidays',
+                    Icons.celebration_rounded,
+                    primaryColor: MyApp.sundayRed,
+                    darkColor: MyApp.sundayRedDark,
+                    fontSize: baseFontSize,
+                    chipPadding: chipPadding,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -699,7 +415,7 @@ class _SchedulesPageState extends State<SchedulesPage> {
                 spacing: 8.0,
                 runSpacing: 8.0,
                 alignment: WrapAlignment.center,
-                children: times.map((time) => _buildTimeChip(time, region, tableType, fontSize: fontSize, chipPadding: chipPadding)).toList(),
+                children: times.map((time) => _buildTimeChip(time, region, tableType, times, fontSize: fontSize, chipPadding: chipPadding)).toList(),
               );
             },
           ),
@@ -709,25 +425,54 @@ class _SchedulesPageState extends State<SchedulesPage> {
   }
 
 
-  Widget _buildTimeChip(String time, String region, String tableType, {double fontSize = 14.0, double chipPadding = 16.0}) {
+  Widget _buildTimeChip(String time, String region, String tableType, List<String> allTimes, {double fontSize = 14.0, double chipPadding = 16.0}) {
     String? nextDeparture = region == 'aysen' ? widget.nextAysenDeparture : widget.nextCoyhaiqueDeparture;
     final isNext = nextDeparture != null && nextDeparture.contains(time) && _shouldHighlightInThisTable(tableType, nextDeparture);
-    final isTomorrow = nextDeparture?.contains('(mañana)') ?? false;
+
+    // Verificar si es la primera o última salida del día
+    final isFirstOfDay = allTimes.isNotEmpty && time == allTimes.first;
+    final isLastOfDay = allTimes.isNotEmpty && time == allTimes.last;
 
     if (isNext) {
       // Chip destacado para la próxima salida
+      // Determinar el estilo según si es primera, última o salida normal
+      Color primaryColor;
+      Color secondaryColor;
+      IconData icon;
+      Color shadowColor;
+
+      if (isFirstOfDay) {
+        // Primera salida del día: amarillo con sol
+        primaryColor = MyApp.saturdayOrange;
+        secondaryColor = MyApp.saturdayOrangeDark;
+        icon = Icons.wb_sunny;
+        shadowColor = MyApp.saturdayOrange;
+      } else if (isLastOfDay) {
+        // Última salida del día: azul petróleo con luna
+        primaryColor = MyApp.primaryNavy;
+        secondaryColor = MyApp.lightNavy;
+        icon = Icons.nightlight_round;
+        shadowColor = MyApp.primaryNavy;
+      } else {
+        // Salida normal: naranja con bus
+        primaryColor = MyApp.primaryOrange;
+        secondaryColor = MyApp.deepOrange;
+        icon = Icons.directions_bus;
+        shadowColor = MyApp.primaryOrange;
+      }
+
       return Container(
         padding: EdgeInsets.symmetric(horizontal: chipPadding, vertical: chipPadding * 0.75),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [MyApp.primaryOrange, MyApp.deepOrange],
+            colors: [primaryColor, secondaryColor],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(25),
           boxShadow: [
             BoxShadow(
-              color: MyApp.primaryOrange.withOpacity(0.4),
+              color: shadowColor.withOpacity(0.4),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -743,7 +488,7 @@ class _SchedulesPageState extends State<SchedulesPage> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
-                isTomorrow ? Icons.nightlight_round : Icons.directions_bus,
+                icon,
                 color: Colors.white,
                 size: fontSize + 2,
               ),

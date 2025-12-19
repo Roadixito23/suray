@@ -302,9 +302,9 @@ class _HomePageState extends State<HomePage> {
                         Image.asset('assets/logo.png', height: 80, fit: BoxFit.contain),
                         Row(
                           children: [
-                            _buildHeroNavButton('Contacto', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContactPage()))),
+                            _buildHeroNavButton('Ubícanos', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContactPage()))),
                             const SizedBox(width: 10),
-                            _buildHeroNavButton('Nuestra Ruta', () {}), // Deshabilitado temporalmente
+                            _buildHeroNavButton('Paraderos', () {}), // Deshabilitado temporalmente
                           ],
                         ),
                       ],
@@ -325,8 +325,8 @@ class _HomePageState extends State<HomePage> {
 
                             // Botón de Horarios
                             ElevatedButton.icon(
-                              icon: const Icon(Icons.calendar_month_outlined),
-                              label: const Text('VER HORARIOS COMPLETOS'),
+                              icon: const Icon(Icons.watch, color: Colors.white, size: 32,),
+                              label: const Text('VER HORARIOS COMPLETOS', style: TextStyle(fontSize: 24)),
                               onPressed: () {
                                 Navigator.push(
                                   context,
@@ -421,47 +421,64 @@ class _HomePageState extends State<HomePage> {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Center(
-            child: Text(
-              'HORARIOS',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                fontFamily: 'Hemiheads',
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(dayIcon, color: Colors.white, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Flexible(
-                child: Text(
-                  _isTodayHoliday
-                      ? 'Hoy es Feriado: $_todayHolidayName'
-                      : 'Hoy es $dayName $dayNumber de $monthAbbr',
-                  style: TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                child: SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: Icon(
+                          _isTodayHoliday ? Icons.celebration : CupertinoIcons.calendar,
+                          color: Colors.white,
+                          size: 48,
+                        ),
+                      ),
+                      if (!_isTodayHoliday)
+                        Positioned(
+                          right: -2,
+                          bottom: -2,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: MyApp.primaryOrange,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 1.5),
+                            ),
+                            child: Icon(
+                              CupertinoIcons.clock_fill,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
                 ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _isTodayHoliday
+                    ? 'Hoy es Feriado: $_todayHolidayName'
+                    : 'Hoy es $dayName $dayNumber de $monthAbbr',
+                style: TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
             ],
           ),

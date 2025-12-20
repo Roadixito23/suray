@@ -37,6 +37,8 @@ flutter:
     - assets/bg/background_route.png
     - assets/logocircle.png
     - assets/insta_icon.png
+    - assets/icons/bus_reloj.png
+    - assets/icons/calendario_reloj.png
   fonts:
     - family: Hemiheads
     - family: Hemiheads

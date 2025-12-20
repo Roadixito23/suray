@@ -353,48 +353,50 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     return AnimatedBuilder(
       animation: _circleAnimationController,
       builder: (context, child) {
-        return Stack(
-          children: [
-            // Círculo 1 - Arriba izquierda
-            Positioned(
-              top: -100 + (50 * _circleAnimationController.value),
-              left: -100 + (30 * _circleAnimationController.value),
-              child: Container(
-                width: 300,
-                height: 300,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      MyApp.primaryNavy.withValues(alpha: 0.3),
-                      MyApp.primaryNavy.withValues(alpha: 0.0),
-                    ],
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            return Stack(
+              children: [
+                // Círculo 1 - Arriba izquierda
+                Positioned(
+                  top: -100 + (50 * _circleAnimationController.value),
+                  left: -100 + (30 * _circleAnimationController.value),
+                  child: Container(
+                    width: 300,
+                    height: 300,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          MyApp.primaryNavy.withValues(alpha: 0.3),
+                          MyApp.primaryNavy.withValues(alpha: 0.0),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            // Círculo 2 - Arriba derecha
-            Positioned(
-              top: 50 - (40 * _circleAnimationController.value),
-              right: -80 - (20 * _circleAnimationController.value),
-              child: Container(
-                width: 250,
-                height: 250,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      MyApp.primaryOrange.withValues(alpha: 0.2),
-                      MyApp.primaryOrange.withValues(alpha: 0.0),
-                    ],
+                // Círculo 2 - Arriba derecha
+                Positioned(
+                  top: 50 - (40 * _circleAnimationController.value),
+                  right: -80 - (20 * _circleAnimationController.value),
+                  child: Container(
+                    width: 250,
+                    height: 250,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          MyApp.primaryOrange.withValues(alpha: 0.2),
+                          MyApp.primaryOrange.withValues(alpha: 0.0),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            // Círculo 3 - Centro
-            Positioned(
-              top: MediaQuery.of(context).size.height / 2 - 150 + (30 * _circleAnimationController.value),
-              left: MediaQuery.of(context).size.width / 2 - 150 - (40 * _circleAnimationController.value),
+                // Círculo 3 - Centro
+                Positioned(
+                  top: constraints.maxHeight / 2 - 150 + (30 * _circleAnimationController.value),
+                  left: constraints.maxWidth / 2 - 150 - (40 * _circleAnimationController.value),
               child: Container(
                 width: 350,
                 height: 350,
@@ -445,7 +447,9 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                 ),
               ),
             ),
-          ],
+              ],
+            );
+          },
         );
       },
     );

@@ -69,15 +69,9 @@ class _SchedulesPageState extends State<SchedulesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
-    final screenWidth = screenSize.width;
-
-    // Detección mejorada de dispositivos móviles
-    final bool isMobilePortrait = screenWidth < 600;
-
-    // Calcular el tamaño de fuente dinámicamente para móviles
-    final double baseFontSize = isMobilePortrait ? 13.0 : 14.0;
-    final double chipPadding = isMobilePortrait ? 10.0 : 16.0;
+    // Valores uniformes para todos los dispositivos
+    final double baseFontSize = 14.0;
+    final double chipPadding = 16.0;
 
     return Scaffold(
       backgroundColor: MyApp.lightGreyBackground,

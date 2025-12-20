@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dart:*)"
+      "Bash(dart:*)",
+      "Bash(flutter analyze:*)"
     ]
   }
 }

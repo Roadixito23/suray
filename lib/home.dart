@@ -256,6 +256,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // Sin AppBar
       body: SelectionArea(
         child: Stack(
           fit: StackFit.expand,
@@ -288,74 +289,88 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
 
-            // 3. Contenido de la UI
-            SafeArea(
-              bottom: false, // No aplicar padding inferior para que el footer esté pegado al borde
-              child: Column(
-                children: [
-                  // AppBar fija en la parte superior
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Image.asset('assets/logo.png', height: 80, fit: BoxFit.contain),
-                        Row(
-                          children: [
-                            _buildHeroNavButton('Ubícanos', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContactPage()))),
-                            const SizedBox(width: 10),
-                            _buildHeroNavButton('Paraderos', () {}), // Deshabilitado temporalmente
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+            // 3. Contenido de la UI - Todo en un SingleChildScrollView
+            SingleChildScrollView(
+              child: SafeArea(
+                child: OrientationBuilder(
+                  builder: (context, orientation) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 70.0),
+                      child: Column(
+                        children: [
+                          // Header adaptable según orientación
+                          _buildHeader(orientation),
 
-                  // Contenido principal con scroll si es necesario
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 20.0, right: 20.0, bottom: 70.0),
-                        child: Column(
-                          children: [
-                            // Tarjeta de Información del Día
-                            _buildCurrentDayInfo(),
+                          // Contenido principal
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                            child: Column(
+                              children: [
+                                // Tarjeta de Información del Día
+                                _buildCurrentDayInfo(),
 
-                            const SizedBox(height: 20),
+                                const SizedBox(height: 20),
 
-                            // Botón de Horarios
-                            ElevatedButton.icon(
-                              icon: const Icon(Icons.watch, color: Colors.white, size: 32,),
-                              label: const Text('VER HORARIOS COMPLETOS', style: TextStyle(fontSize: 24)),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (context) => SchedulesPage(
-                                    firestore: _firestore,
-                                    holidays: _holidays,
-                                    nextAysenDeparture: _nextAysenDeparture,
-                                    nextCoyhaiqueDeparture: _nextCoyhaiqueDeparture,
-                                    currentDayCollection: _currentDayCollection,
-                                  )),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.black,
-                                foregroundColor: MyApp.primaryOrange,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                minimumSize: const Size(double.infinity, 50),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                elevation: 3,
-                                shadowColor: MyApp.primaryOrange.withOpacity(0.4),
-                              ),
+                                // Botón de Horarios con texto responsive
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => SchedulesPage(
+                                        firestore: _firestore,
+                                        holidays: _holidays,
+                                        nextAysenDeparture: _nextAysenDeparture,
+                                        nextCoyhaiqueDeparture: _nextCoyhaiqueDeparture,
+                                        currentDayCollection: _currentDayCollection,
+                                      )),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.black,
+                                    foregroundColor: MyApp.primaryOrange,
+                                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                                    minimumSize: const Size(double.infinity, 60),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    elevation: 3,
+                                    shadowColor: MyApp.primaryOrange.withOpacity(0.4),
+                                  ),
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Image.asset(
+                                          'assets/icons/bus_reloj.png',
+                                          width: 28,
+                                          height: 28,
+                                          fit: BoxFit.contain,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        const Text(
+                                          'TODOS LOS HORARIOS',
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        const Icon(
+                                          Icons.touch_app_rounded,
+                                          size: 28,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ),
-                ],
+                    );
+                  },
+                ),
               ),
             ),
 
@@ -370,6 +385,51 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+  }
+
+  Widget _buildHeader(Orientation orientation) {
+    if (orientation == Orientation.portrait) {
+      // Layout vertical: Logo centrado arriba, botones abajo centrados
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+        child: Column(
+          children: [
+            // Logo centrado
+            Center(
+              child: Image.asset('assets/logo.png', height: 80, fit: BoxFit.contain),
+            ),
+            const SizedBox(height: 16),
+            // Botones centrados debajo del logo
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildHeroNavButton('Ubícanos', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContactPage()))),
+                const SizedBox(width: 10),
+                _buildHeroNavButton('Paraderos', () {}), // Deshabilitado temporalmente
+              ],
+            ),
+          ],
+        ),
+      );
+    } else {
+      // Layout horizontal: Logo a la izquierda, botones a la derecha
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Image.asset('assets/logo.png', height: 80, fit: BoxFit.contain),
+            Row(
+              children: [
+                _buildHeroNavButton('Ubícanos', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContactPage()))),
+                const SizedBox(width: 10),
+                _buildHeroNavButton('Paraderos', () {}), // Deshabilitado temporalmente
+              ],
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   Widget _buildHeroNavButton(String text, VoidCallback onPressed) {
@@ -399,7 +459,6 @@ class _HomePageState extends State<HomePage> {
     Color cardColor = _isTodayHoliday
         ? MyApp.errorColor.withOpacity(0.9)
         : MyApp.primaryNavy.withOpacity(0.9);
-    IconData dayIcon = _isTodayHoliday ? Icons.celebration : Icons.calendar_today;
 
     return Container(
       width: double.infinity,
@@ -435,35 +494,18 @@ class _HomePageState extends State<HomePage> {
                 child: SizedBox(
                   width: 48,
                   height: 48,
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: Icon(
-                          _isTodayHoliday ? Icons.celebration : CupertinoIcons.calendar,
+                  child: _isTodayHoliday
+                      ? Icon(
+                          Icons.celebration,
                           color: Colors.white,
                           size: 48,
+                        )
+                      : Image.asset(
+                          'assets/icons/calendario_reloj.png',
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.contain,
                         ),
-                      ),
-                      if (!_isTodayHoliday)
-                        Positioned(
-                          right: -2,
-                          bottom: -2,
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              color: MyApp.primaryOrange,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 1.5),
-                            ),
-                            child: Icon(
-                              CupertinoIcons.clock_fill,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
                 ),
               ),
               const SizedBox(height: 12),

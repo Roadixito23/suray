@@ -150,9 +150,6 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
-    final isSmallScreen = screenSize.width < 600;
-
     if (_isLoading) {
       return Scaffold(
         backgroundColor: primaryBlue,
@@ -244,9 +241,9 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
     return Scaffold(
       backgroundColor: primaryBlue,
       appBar: AppBar(
-        title: Text(
-          isSmallScreen ? 'Ruta 240' : 'Ruta 240 - Mapa Interactivo',
-          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        title: const Text(
+          'Ruta 240 - Mapa Interactivo',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         backgroundColor: primaryBlue,
         elevation: 0,
@@ -287,13 +284,13 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
                 ),
               ),
 
-              // Mapa interactivo con zoom y pan para móviles
+              // Mapa interactivo con zoom y pan
               Center(
                 child: InteractiveViewer(
                   transformationController: _transformationController,
-                  minScale: isSmallScreen ? 0.5 : 0.8,
-                  maxScale: isSmallScreen ? 3.0 : 2.0,
-                  boundaryMargin: EdgeInsets.all(isSmallScreen ? 50 : 100),
+                  minScale: 0.8,
+                  maxScale: 2.0,
+                  boundaryMargin: const EdgeInsets.all(100),
                   constrained: false,
                   child: Container(
                     width: canvasWidth,
@@ -309,7 +306,6 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
                             arrowProgress: _arrowAnimation.value,
                             canvasWidth: canvasWidth,
                             canvasHeight: canvasHeight,
-                            isSmallScreen: isSmallScreen,
                           ),
                           child: Stack(
                             children: [
@@ -323,14 +319,13 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
                                     terminal.name,
                                     terminal.km,
                                     terminal.km == 0,
-                                    !isSmallScreen,
-                                    isSmallScreen,
+                                    true,
                                   ),
                                 );
                               }).toList(),
 
                               // Estaciones interactivas
-                              ..._buildStationWidgets(responsiveStations, isSmallScreen),
+                              ..._buildStationWidgets(responsiveStations),
                             ],
                           ),
                         );
@@ -340,49 +335,9 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
                 ),
               ),
 
-              // Indicador de zoom para móviles
-              if (isSmallScreen)
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.pinch, color: Colors.white, size: 16),
-                        SizedBox(width: 4),
-                        Text(
-                          'Pellizca para zoom',
-                          style: TextStyle(color: Colors.white, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              // Panel de información adaptativo
+              // Panel de información
               if (_selectedStation != null)
-                _buildResponsiveInfoPanel(responsiveStations, isSmallScreen),
-
-              // Botón de reset zoom para móviles
-              if (isSmallScreen)
-                Positioned(
-                  right: 20,
-                  bottom: _selectedStation != null ? 160 : 20,
-                  child: FloatingActionButton(
-                    mini: true,
-                    backgroundColor: primaryOrange,
-                    onPressed: () {
-                      _transformationController.value = Matrix4.identity();
-                    },
-                    child: const Icon(Icons.zoom_out_map, color: Colors.white, size: 20),
-                  ),
-                ),
+                _buildResponsiveInfoPanel(responsiveStations),
             ],
           );
         },
@@ -438,12 +393,12 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
     );
   }
 
-  Widget _buildTerminal(String text, int km, bool isStart, bool isLarge, bool isSmallScreen) {
+  Widget _buildTerminal(String text, int km, bool isStart, bool isLarge) {
     return Center(
       child: Container(
         padding: EdgeInsets.symmetric(
-          horizontal: isSmallScreen ? 15 : (isLarge ? 25 : 15),
-          vertical: isSmallScreen ? 8 : (isLarge ? 12 : 8),
+          horizontal: isLarge ? 25 : 15,
+          vertical: isLarge ? 12 : 8,
         ),
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -453,7 +408,7 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(isSmallScreen ? 20 : 30),
+          borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
               color: (isStart ? primaryBlue : primaryOrange).withOpacity(0.4),
@@ -472,9 +427,9 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
             Icon(
               Icons.gps_fixed,
               color: Colors.white,
-              size: isSmallScreen ? 18 : (isLarge ? 28 : 20),
+              size: isLarge ? 28 : 20,
             ),
-            SizedBox(width: isSmallScreen ? 6 : 10),
+            SizedBox(width: isLarge ? 10 : 6),
             Column(
               children: [
                 Text(
@@ -482,14 +437,14 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
-                    fontSize: isSmallScreen ? 14 : (isLarge ? 20 : 14),
+                    fontSize: isLarge ? 20 : 14,
                   ),
                 ),
                 Text(
                   'Km $km',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.9),
-                    fontSize: isSmallScreen ? 10 : (isLarge ? 14 : 12),
+                    fontSize: isLarge ? 14 : 12,
                   ),
                 ),
               ],
@@ -500,9 +455,9 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
     );
   }
 
-  List<Widget> _buildStationWidgets(List<Station> stations, bool isSmallScreen) {
+  List<Widget> _buildStationWidgets(List<Station> stations) {
     final visibleStations = stations.where((station) => !station.isTerminal).toList();
-    final stationSize = isSmallScreen ? 40.0 : 50.0;
+    final stationSize = 50.0;
     final halfSize = stationSize / 2;
 
     return visibleStations.map((station) {
@@ -535,7 +490,7 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
                       color: isSelected
                           ? Colors.white
                           : (station.side == 'left' ? primaryBlue : accentBlue),
-                      width: isSmallScreen ? 2 : 3,
+                      width: 3,
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -551,7 +506,7 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
                       style: TextStyle(
                         color: isSelected ? Colors.white : primaryBlue,
                         fontWeight: FontWeight.bold,
-                        fontSize: isSmallScreen ? 12 : 16,
+                        fontSize: 16,
                       ),
                     ),
                   ),
@@ -564,19 +519,19 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
     }).toList();
   }
 
-  Widget _buildResponsiveInfoPanel(List<Station> stations, bool isSmallScreen) {
+  Widget _buildResponsiveInfoPanel(List<Station> stations) {
     final station = stations.firstWhere((s) => s.id == _selectedStation);
 
     return Positioned(
-      bottom: isSmallScreen ? 10 : 20,
-      left: isSmallScreen ? 10 : 20,
-      right: isSmallScreen ? 10 : 20,
+      bottom: 20,
+      left: 20,
+      right: 20,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
-        padding: EdgeInsets.all(isSmallScreen ? 12 : 20),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(isSmallScreen ? 15 : 20),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: primaryOrange.withOpacity(0.3),
             width: 1,
@@ -596,9 +551,9 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
             Row(
               children: [
                 Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isSmallScreen ? 8 : 12,
-                    vertical: isSmallScreen ? 4 : 6,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
                   ),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -608,10 +563,10 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
                   ),
                   child: Text(
                     'Km ${station.km}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: isSmallScreen ? 12 : 14,
+                      fontSize: 14,
                     ),
                   ),
                 ),
@@ -619,25 +574,25 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
                 Expanded(
                   child: Text(
                     station.fullName,
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 14 : 18,
+                    style: const TextStyle(
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: primaryBlue,
                     ),
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close, color: primaryBlue, size: isSmallScreen ? 20 : 24),
+                  icon: const Icon(Icons.close, color: primaryBlue, size: 24),
                   onPressed: () => setState(() => _selectedStation = null),
                   padding: EdgeInsets.zero,
-                  constraints: BoxConstraints(
-                    minWidth: isSmallScreen ? 30 : 40,
-                    minHeight: isSmallScreen ? 30 : 40,
+                  constraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
                   ),
                 ),
               ],
             ),
-            SizedBox(height: isSmallScreen ? 6 : 10),
+            const SizedBox(height: 10),
             Row(
               children: [
                 Icon(
@@ -651,7 +606,7 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
                       : station.side == 'right'
                       ? accentBlue
                       : primaryOrange,
-                  size: isSmallScreen ? 16 : 20,
+                  size: 20,
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -662,7 +617,7 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
                       : 'Terminal',
                   style: TextStyle(
                     color: Colors.grey[600],
-                    fontSize: isSmallScreen ? 12 : 14,
+                    fontSize: 14,
                   ),
                 ),
               ],
@@ -674,19 +629,17 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
   }
 
   void _showInfoDialog(BuildContext context) {
-    final isSmallScreen = MediaQuery.of(context).size.width < 600;
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Row(
+        title: const Row(
           children: [
-            Icon(Icons.map, color: primaryBlue, size: isSmallScreen ? 20 : 24),
-            const SizedBox(width: 10),
+            Icon(Icons.map, color: primaryBlue, size: 24),
+            SizedBox(width: 10),
             Expanded(
               child: Text(
                 'Cómo usar el mapa',
-                style: TextStyle(fontSize: isSmallScreen ? 16 : 18),
+                style: TextStyle(fontSize: 18),
               ),
             ),
           ],
@@ -699,34 +652,27 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
               _buildInfoRow(
                 Icons.touch_app,
                 'Toca las estaciones para ver información',
-                isSmallScreen,
               ),
               const SizedBox(height: 12),
-              if (isSmallScreen) ...[
-                _buildInfoRow(
-                  Icons.pinch,
-                  'Pellizca con dos dedos para hacer zoom',
-                  isSmallScreen,
-                ),
-                const SizedBox(height: 12),
-                _buildInfoRow(
-                  Icons.pan_tool,
-                  'Arrastra para moverte por el mapa',
-                  isSmallScreen,
-                ),
-              ] else ...[
-                _buildInfoRow(
-                  Icons.swipe_vertical,
-                  'Desliza hacia arriba o abajo para navegar',
-                  isSmallScreen,
-                ),
-                const SizedBox(height: 12),
-                _buildInfoRow(
-                  Icons.mouse,
-                  'Usa la rueda del ratón o scroll en PC',
-                  isSmallScreen,
-                ),
-              ],
+              _buildInfoRow(
+                Icons.pinch,
+                'Pellizca con dos dedos para hacer zoom',
+              ),
+              const SizedBox(height: 12),
+              _buildInfoRow(
+                Icons.pan_tool,
+                'Arrastra para moverte por el mapa',
+              ),
+              const SizedBox(height: 12),
+              _buildInfoRow(
+                Icons.swipe_vertical,
+                'Desliza hacia arriba o abajo para navegar',
+              ),
+              const SizedBox(height: 12),
+              _buildInfoRow(
+                Icons.mouse,
+                'Usa la rueda del ratón o scroll',
+              ),
               const SizedBox(height: 20),
               Container(
                 padding: const EdgeInsets.all(10),
@@ -734,14 +680,14 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
                   color: lightBlue,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
                     Icon(Icons.rotate_left, size: 20, color: primaryBlue),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Las flechas indican el sentido del trayecto',
-                        style: TextStyle(fontSize: isSmallScreen ? 12 : 13),
+                        style: TextStyle(fontSize: 13),
                       ),
                     ),
                   ],
@@ -763,15 +709,15 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String text, bool isSmallScreen) {
+  Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, size: isSmallScreen ? 18 : 20, color: primaryOrange),
+        Icon(icon, size: 20, color: primaryOrange),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             text,
-            style: TextStyle(fontSize: isSmallScreen ? 12 : 14),
+            style: const TextStyle(fontSize: 14),
           ),
         ),
       ],
@@ -805,7 +751,6 @@ class ResponsiveMetroMapPainter extends CustomPainter {
   final double arrowProgress;
   final double canvasWidth;
   final double canvasHeight;
-  final bool isSmallScreen;
 
   ResponsiveMetroMapPainter({
     required this.stations,
@@ -813,7 +758,6 @@ class ResponsiveMetroMapPainter extends CustomPainter {
     this.arrowProgress = 0.0,
     required this.canvasWidth,
     required this.canvasHeight,
-    required this.isSmallScreen,
   });
 
   @override
@@ -824,14 +768,12 @@ class ResponsiveMetroMapPainter extends CustomPainter {
     // Dibujar las líneas de la ruta
     _drawRouteLines(canvas, size);
 
-    // Dibujar nombres de estaciones (solo en pantallas grandes)
-    if (!isSmallScreen) {
-      _drawStationNames(canvas);
-    }
+    // Dibujar nombres de estaciones
+    _drawStationNames(canvas);
   }
 
   void _drawCircularRoute(Canvas canvas, Size size) {
-    final strokeWidth = isSmallScreen ? 1.5 : 2.0;
+    final strokeWidth = 2.0;
     final paint = Paint()
       ..color = _MetroMapRouteState.primaryBlue.withOpacity(0.4)
       ..style = PaintingStyle.stroke
@@ -874,8 +816,8 @@ class ResponsiveMetroMapPainter extends CustomPainter {
   }
 
   void _drawDashedPath(Canvas canvas, Path path, Paint paint) {
-    final dashWidth = isSmallScreen ? 8.0 : 10.0;
-    final dashSpace = isSmallScreen ? 4.0 : 5.0;
+    final dashWidth = 10.0;
+    final dashSpace = 5.0;
     final pathMetrics = path.computeMetrics();
 
     for (final metric in pathMetrics) {
@@ -911,7 +853,7 @@ class ResponsiveMetroMapPainter extends CustomPainter {
       Offset(rightX, canvasHeight * 0.94 - (verticalRange / 2) - arrowProgress * verticalRange),
     ];
 
-    final arrowSize = isSmallScreen ? 6.0 : 8.0;
+    final arrowSize = 8.0;
 
     for (final position in arrowPositions) {
       // Ajustar la posición para que circule
@@ -941,7 +883,7 @@ class ResponsiveMetroMapPainter extends CustomPainter {
   void _drawRouteLines(Canvas canvas, Size size) {
     if (stations.isEmpty) return;
 
-    final strokeWidth = isSmallScreen ? 4.0 : 6.0;
+    final strokeWidth = 6.0;
 
     final leftLinePaint = Paint()
       ..color = _MetroMapRouteState.primaryBlue

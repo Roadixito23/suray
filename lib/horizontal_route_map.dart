@@ -132,13 +132,12 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-    final isMobile = screenSize.width < 600;
 
     return Scaffold(
       backgroundColor: MyApp.primaryNavy,
       appBar: AppBar(
-        title: Text(
-          isMobile ? 'Ruta 240' : 'Ruta 240 - Mapa Interactivo',
+        title: const Text(
+          'Ruta 240 - Mapa Interactivo',
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -164,7 +163,7 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
           ? _buildLoadingState()
           : _stations.isEmpty
           ? _buildEmptyState()
-          : _buildRouteMap(isMobile, screenSize),
+          : _buildRouteMap(screenSize),
       // Barra de navegación para facilitar navegación en PC
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -300,7 +299,7 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
     );
   }
 
-  Widget _buildRouteMap(bool isMobile, Size screenSize) {
+  Widget _buildRouteMap(Size screenSize) {
     return Stack(
       children: [
         // Fondo con gradiente mejorado y efectos
@@ -323,27 +322,27 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
           ),
         ),
 
-        // Contenedor principal - AHORA USA TODO EL ANCHO DISPONIBLE
+        // Contenedor principal
         Center(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: isMobile ? 24 : 48,
-                vertical: isMobile ? 16 : 24,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 48,
+                vertical: 24,
               ),
-              child: _buildHorizontalRoute(isMobile, screenSize),
+              child: _buildHorizontalRoute(screenSize),
             ),
           ),
         ),
 
         // Panel de información de la estación seleccionada
         if (_selectedStationId != null)
-          _buildStationInfoPanel(isMobile),
+          _buildStationInfoPanel(),
 
-        // Indicador de scroll para móviles (solo si hay scroll)
-        if (isMobile && _stations.length > 3)
+        // Indicador de scroll (solo si hay scroll)
+        if (_stations.length > 3)
           Positioned(
             top: 10,
             left: 0,
@@ -397,7 +396,7 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
     );
   }
 
-  Widget _buildHorizontalRoute(bool isMobile, Size screenSize) {
+  Widget _buildHorizontalRoute(Size screenSize) {
     if (_stations.isEmpty) return const SizedBox.shrink();
 
     // Calcular el rango de KM
@@ -406,17 +405,17 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
     final int kmRange = maxKm - minKm;
 
     // ============================================================
-    // CÁLCULO DEL ANCHO ADAPTATIVO
+    // CÁLCULO DEL ANCHO
     // ============================================================
 
     // Márgenes en los bordes (izquierdo y derecho)
-    final double edgeMargin = isMobile ? 60.0 : 100.0;
+    final double edgeMargin = 100.0;
 
     // Ancho disponible de la pantalla (menos márgenes del padding exterior)
-    final double screenAvailable = screenSize.width - (isMobile ? 48 : 96);
+    final double screenAvailable = screenSize.width - 96;
 
     // Espaciado mínimo entre estaciones para evitar superposición
-    final double minSpacingPerStation = isMobile ? 140.0 : 180.0;
+    final double minSpacingPerStation = 180.0;
 
     // Ancho mínimo necesario basado en cantidad de estaciones
     final double minRequiredWidth = (_stations.length - 1) * minSpacingPerStation + edgeMargin * 2;
@@ -429,8 +428,8 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
     // ============================================================
 
     // Altura disponible para el mapa (dejando espacio para AppBar y panel info)
-    final double availableHeight = screenSize.height - (isMobile ? 180 : 200);
-    final double containerHeight = math.min(availableHeight, isMobile ? 320.0 : 400.0);
+    final double availableHeight = screenSize.height - 200;
+    final double containerHeight = math.min(availableHeight, 400.0);
 
     // Posición Y de la línea principal (centrada verticalmente)
     final double lineY = containerHeight / 2;
@@ -450,7 +449,6 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
               size: Size(totalWidth - edgeMargin * 2 + 40, 6),
               painter: EnhancedRouteLinePainter(
                 color: MyApp.primaryOrange,
-                isMobile: isMobile,
               ),
             ),
           ),
@@ -464,7 +462,7 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
               final bool goingRight = _busAnimationController.status == AnimationStatus.forward;
 
               return Positioned(
-                top: lineY - (isMobile ? 22 : 26),
+                top: lineY - 26,
                 left: busPosition,
                 child: Transform.scale(
                   scale: 0.95 + (math.sin(_busAnimation.value * math.pi * 2) * 0.05),
@@ -499,25 +497,25 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (goingRight) ...[
-                          _buildArrowIcon(isMobile, 0.5),
+                          _buildArrowIcon(0.5),
                           const SizedBox(width: 3),
-                          _buildArrowIcon(isMobile, 0.75),
+                          _buildArrowIcon(0.75),
                           const SizedBox(width: 3),
-                          _buildArrowIcon(isMobile, 1.0),
+                          _buildArrowIcon(1.0),
                         ] else ...[
                           Transform.rotate(
                             angle: math.pi,
-                            child: _buildArrowIcon(isMobile, 1.0),
+                            child: _buildArrowIcon(1.0),
                           ),
                           const SizedBox(width: 3),
                           Transform.rotate(
                             angle: math.pi,
-                            child: _buildArrowIcon(isMobile, 0.75),
+                            child: _buildArrowIcon(0.75),
                           ),
                           const SizedBox(width: 3),
                           Transform.rotate(
                             angle: math.pi,
-                            child: _buildArrowIcon(isMobile, 0.5),
+                            child: _buildArrowIcon(0.5),
                           ),
                         ],
                       ],
@@ -530,7 +528,6 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
 
           // Estaciones con alternancia arriba/abajo
           ..._buildStationMarkers(
-            isMobile: isMobile,
             totalWidth: totalWidth,
             edgeMargin: edgeMargin,
             lineY: lineY,
@@ -544,7 +541,6 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
 
   /// Genera los marcadores de estaciones con posición alternada (arriba/abajo)
   List<Widget> _buildStationMarkers({
-    required bool isMobile,
     required double totalWidth,
     required double edgeMargin,
     required double lineY,
@@ -573,7 +569,7 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
       final bool isAbove = index % 2 == 0;
 
       return Positioned(
-        left: xPosition - (isMobile ? 60 : 80),
+        left: xPosition - 80,
         top: 0,
         bottom: 0,
         child: AnimatedBuilder(
@@ -589,7 +585,6 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
                 offset: Offset(0, (1 - slideValue) * (isAbove ? -20 : 20)),
                 child: _buildStationContent(
                   station: station,
-                  isMobile: isMobile,
                   lineY: lineY,
                   isAbove: isAbove,
                 ),
@@ -601,27 +596,24 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
     });
   }
 
-  Widget _buildArrowIcon(bool isMobile, double opacity) {
+  Widget _buildArrowIcon(double opacity) {
     return Icon(
       Icons.arrow_forward_ios_rounded,
       color: Colors.white.withOpacity(opacity),
-      size: isMobile ? 14 : 18,
+      size: 18,
     );
   }
 
   /// Construye el contenido visual de una estación (alternando arriba/abajo)
   Widget _buildStationContent({
     required RouteStation station,
-    required bool isMobile,
     required double lineY,
     required bool isAbove,
   }) {
     final bool isSelected = _selectedStationId == station.id;
-    final double markerSize = station.isTerminal
-        ? (isMobile ? 30.0 : 38.0)
-        : (isMobile ? 22.0 : 28.0);
+    final double markerSize = station.isTerminal ? 38.0 : 28.0;
 
-    final double connectorHeight = isMobile ? 30.0 : 40.0;
+    final double connectorHeight = 40.0;
 
     return GestureDetector(
       onTap: () {
@@ -632,14 +624,14 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: SizedBox(
-          width: isMobile ? 120 : 160,
+          width: 160,
           child: Stack(
             children: [
               // ============================================================
               // MARCADOR CIRCULAR (siempre en la línea)
               // ============================================================
               Positioned(
-                left: (isMobile ? 120 : 160) / 2 - markerSize / 2,
+                left: 160 / 2 - markerSize / 2,
                 top: lineY - markerSize / 2,
                 child: AnimatedBuilder(
                   animation: isSelected ? _pulseAnimation : const AlwaysStoppedAnimation(1.0),
@@ -701,7 +693,7 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
               // LÍNEA CONECTORA VERTICAL
               // ============================================================
               Positioned(
-                left: (isMobile ? 120 : 160) / 2 - 1.5,
+                left: 160 / 2 - 1.5,
                 top: isAbove
                     ? lineY - markerSize / 2 - connectorHeight
                     : lineY + markerSize / 2,
@@ -763,7 +755,7 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
                             station.name,
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: (isMobile ? 12 : 14) + (value * 2),
+                              fontSize: 14 + (value * 2),
                               fontWeight: station.isTerminal
                                   ? FontWeight.bold
                                   : (isSelected ? FontWeight.w600 : FontWeight.w500),
@@ -786,9 +778,9 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
 
                     // Badge de KM
                     Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isMobile ? 10 : 12,
-                        vertical: isMobile ? 5 : 6,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
                       ),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -810,9 +802,9 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
                       ),
                       child: Text(
                         'KM ${station.km}',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Colors.white,
-                          fontSize: isMobile ? 10 : 12,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.5,
                         ),
@@ -820,8 +812,7 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
                     ),
 
                     if (isAbove) ...[
-                      SizedBox(height: lineY - markerSize / 2 - connectorHeight -
-                          (isMobile ? 70 : 85)),
+                      SizedBox(height: lineY - markerSize / 2 - connectorHeight - 85),
                     ],
                   ],
                 ),
@@ -833,7 +824,7 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
     );
   }
 
-  Widget _buildStationInfoPanel(bool isMobile) {
+  Widget _buildStationInfoPanel() {
     final station = _stations.firstWhere(
           (s) => s.id == _selectedStationId,
       orElse: () => _stations.first,
@@ -841,8 +832,8 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
 
     return Positioned(
       bottom: 20,
-      left: isMobile ? 16 : 40,
-      right: isMobile ? 16 : 40,
+      left: 40,
+      right: 40,
       child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0.0, end: 1.0),
         duration: const Duration(milliseconds: 400),
@@ -853,7 +844,7 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
             child: Opacity(
               opacity: value,
               child: Container(
-                padding: EdgeInsets.all(isMobile ? 16 : 20),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
@@ -915,8 +906,8 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
                         Expanded(
                           child: Text(
                             station.fullName,
-                            style: TextStyle(
-                              fontSize: isMobile ? 16 : 18,
+                            style: const TextStyle(
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: MyApp.primaryNavy,
                             ),
@@ -951,17 +942,17 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.location_on,
                               color: MyApp.primaryOrange,
-                              size: isMobile ? 16 : 18,
+                              size: 18,
                             ),
                             const SizedBox(width: 6),
                             Text(
                               'Terminal Principal',
                               style: TextStyle(
                                 color: MyApp.primaryNavy,
-                                fontSize: isMobile ? 13 : 14,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -980,8 +971,6 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
   }
 
   void _showInfoDialog(BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 600;
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -999,11 +988,11 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
               child: const Icon(Icons.map, color: MyApp.primaryOrange),
             ),
             const SizedBox(width: 10),
-            Expanded(
+            const Expanded(
               child: Text(
                 'Cómo usar el mapa',
                 style: TextStyle(
-                  fontSize: isMobile ? 16 : 18,
+                  fontSize: 18,
                   color: MyApp.primaryNavy,
                 ),
               ),
@@ -1018,19 +1007,16 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
               _buildInfoRow(
                 Icons.touch_app,
                 'Toca las estaciones para ver información detallada',
-                isMobile,
               ),
               const SizedBox(height: 12),
               _buildInfoRow(
                 Icons.swipe_left,
                 'Desliza horizontalmente para ver toda la ruta',
-                isMobile,
               ),
               const SizedBox(height: 12),
               _buildInfoRow(
                 Icons.arrow_forward_ios_rounded,
                 'Las flechas animadas muestran el recorrido del bus',
-                isMobile,
               ),
               const SizedBox(height: 20),
               Container(
@@ -1056,7 +1042,7 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
                       child: Text(
                         'Los círculos con gradiente naranja son terminales',
                         style: TextStyle(
-                          fontSize: isMobile ? 12 : 13,
+                          fontSize: 13,
                           color: MyApp.primaryNavy,
                           fontWeight: FontWeight.w500,
                         ),
@@ -1089,7 +1075,7 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String text, bool isMobile) {
+  Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1101,7 +1087,7 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
           ),
           child: Icon(
             icon,
-            size: isMobile ? 18 : 20,
+            size: 20,
             color: MyApp.primaryOrange,
           ),
         ),
@@ -1112,7 +1098,7 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
             child: Text(
               text,
               style: TextStyle(
-                fontSize: isMobile ? 12 : 14,
+                fontSize: 14,
                 color: MyApp.primaryNavy.withOpacity(0.8),
               ),
             ),
@@ -1145,11 +1131,9 @@ class RouteStation {
 /// Painter mejorado para dibujar la línea de la ruta
 class EnhancedRouteLinePainter extends CustomPainter {
   final Color color;
-  final bool isMobile;
 
   EnhancedRouteLinePainter({
     required this.color,
-    required this.isMobile,
   });
 
   @override
@@ -1164,7 +1148,7 @@ class EnhancedRouteLinePainter extends CustomPainter {
         ],
         stops: const [0.0, 0.15, 0.85, 1.0],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
-      ..strokeWidth = isMobile ? 5 : 6
+      ..strokeWidth = 6
       ..strokeCap = StrokeCap.round;
 
     // Línea principal
@@ -1185,7 +1169,7 @@ class EnhancedRouteLinePainter extends CustomPainter {
         ],
         stops: const [0.0, 0.15, 0.85, 1.0],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
-      ..strokeWidth = isMobile ? 1.5 : 2
+      ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
 
     canvas.drawLine(

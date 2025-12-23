@@ -99,6 +99,24 @@ class _ContactPageState extends State<ContactPage>
     }
   }
 
+  // Función para abrir Google Maps
+  Future<void> _openMap(String mapUrl) async {
+    final Uri uri = Uri.parse(mapUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo abrir el mapa'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -233,6 +251,10 @@ class _ContactPageState extends State<ContactPage>
                             _buildIntroCard(),
                             const SizedBox(height: 24),
 
+                            _buildLocationSection(),
+
+                            const SizedBox(height: 24),
+
                             // Tarjetas de contacto
                             _buildContactCard(
                               icon: Icons.email_rounded,
@@ -243,8 +265,6 @@ class _ContactPageState extends State<ContactPage>
                               delay: 200,
                               onTap: () => _sendEmail('suray.ltda@gmail.com'),
                             ),
-
-                            _buildLocationSection(),
                           ],
                         ),
                       ),
@@ -388,36 +408,47 @@ class _ContactPageState extends State<ContactPage>
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: MyApp.lightGreyBackground,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: MyApp.borderColor,
-                            width: 1,
+                      InkWell(
+                        onTap: onTap,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
                           ),
-                        ),
-                        child: Text(
-                          content,
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: MyApp.darkTextColor,
+                          decoration: BoxDecoration(
+                            color: color.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: color.withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  content,
+                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: color,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Icon(
+                                Icons.touch_app_rounded,
+                                size: 14,
+                                color: color.withOpacity(0.5),
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                if (onTap != null)
-                  Icon(
-                    Icons.touch_app_rounded,
-                    color: color.withOpacity(0.5),
-                    size: 24,
-                  ),
               ],
             ),
           ),
@@ -445,12 +476,14 @@ class _ContactPageState extends State<ContactPage>
               address: 'Eusebio Ibar 630, Aysén',
               phone: '672 336222',
               icon: Icons.business_rounded,
+              mapUrl: 'https://maps.app.goo.gl/1nv7mAcGRpFVPMacA',
             ),
             LocationInfo(
               type: 'Correspondencia',
               address: 'Eusebio Ibar 630, Aysén',
               phone: '672 336231',
-              icon: Icons.mail_rounded,
+              icon: Icons.local_shipping_rounded,
+              mapUrl: 'https://maps.app.goo.gl/1nv7mAcGRpFVPMacA',
             ),
           ],
           color: MyApp.primaryNavy,
@@ -468,12 +501,14 @@ class _ContactPageState extends State<ContactPage>
               address: 'Terminal Municipal de Coyhaique, Oficina N°2',
               phone: '672 212639',
               icon: Icons.location_city_rounded,
+              mapUrl: 'https://maps.app.goo.gl/9AJMknQmkmf3tHSo8',
             ),
             LocationInfo(
               type: 'Correspondencia',
               address: 'Arturo Prat 265, Coyhaique',
               phone: '672 234085',
-              icon: Icons.mail_rounded,
+              icon: Icons.local_shipping_rounded,
+              mapUrl: 'https://maps.app.goo.gl/pMdzjb5y1Mg1iNQd9',
             ),
           ],
           color: MyApp.accentBlue,
@@ -578,42 +613,87 @@ class _ContactPageState extends State<ContactPage>
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 8),
-                InkWell(
-                  onTap: () => _makePhoneCall(info.phone),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    InkWell(
+                      onTap: () => _makePhoneCall(info.phone),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: color.withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.phone_rounded,
-                            size: 16,
-                            color: color),
-                        const SizedBox(width: 6),
-                        Text(
-                          info.phone,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: color,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: color.withOpacity(0.3),
+                            width: 1,
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Icon(
-                          Icons.touch_app_rounded,
-                          size: 14,
-                          color: color.withOpacity(0.5),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.phone_rounded,
+                                size: 16,
+                                color: color),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                info.phone,
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: color,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Icon(
+                              Icons.touch_app_rounded,
+                              size: 14,
+                              color: color.withOpacity(0.5),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: () => _openMap(info.mapUrl),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: color.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.map_rounded,
+                                size: 16,
+                                color: color),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Abrir Mapa',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: color,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Icon(
+                              Icons.touch_app_rounded,
+                              size: 14,
+                              color: color.withOpacity(0.5),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -629,11 +709,13 @@ class LocationInfo {
   final String address;
   final String phone;
   final IconData icon;
+  final String mapUrl;
 
   LocationInfo({
     required this.type,
     required this.address,
     required this.phone,
     required this.icon,
+    required this.mapUrl,
   });
 }

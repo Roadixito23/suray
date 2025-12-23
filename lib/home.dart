@@ -37,8 +37,8 @@ class _HomePageState extends State<HomePage> {
   bool _isWeatherLoading = true;
 
   final List<String> _panelImages = [
+    'assets/home_panels/puente_aysen.png',
     'assets/home_panels/tunel.png',
-    'assets/home_panels/aysen.png',
   ];
   late final PageController _pageController;
   Timer? _imageRotationTimer;
@@ -582,27 +582,30 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildDepartureInfoColumn(String city, String time, CompactWeatherData? weather) {
-    // Lógica para separar "Hoy/Mañana", "a las" y la hora para mejor control del layout
-    List<Widget> timeWidgets = [];
+    // Extraer componentes: día (Hoy/Mañana), hora y sufijo
+    String dayPart = '';
+    String hourPart = '';
+    String suffixPart = '';
+    
     if (time.contains(' a las ')) {
       final parts = time.split(' a las ');
-      timeWidgets = [
-        Text(parts[0], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 4.0),
-          child: Text("a las", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-        ),
-        Text(parts[1], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-      ];
+      dayPart = parts[0]; // "Hoy" o "Mañana"
+      final timePart = parts[1]; // "16:30 hrs." o "8:00 am"
+      
+      // Separar hora del sufijo
+      final timeMatch = RegExp(r'^(\d{1,2}:\d{2})\s*(.*)$').firstMatch(timePart);
+      if (timeMatch != null) {
+        hourPart = timeMatch.group(1) ?? timePart;
+        suffixPart = timeMatch.group(2) ?? '';
+      } else {
+        hourPart = timePart;
+      }
     } else {
-      timeWidgets = [
-        Text(
-          time,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-          textAlign: TextAlign.center,
-        )
-      ];
+      hourPart = time;
     }
+
+    // Usar MediaQuery para determinar orientación
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -624,22 +627,85 @@ class _HomePageState extends State<HomePage> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: MyApp.primaryOrange,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Wrap(
-              alignment: WrapAlignment.center,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 4,
-              runSpacing: 4,
-              children: timeWidgets,
+          Expanded(
+            flex: 2,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: MyApp.primaryOrange,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: isLandscape
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (dayPart.isNotEmpty) ...[
+                          Flexible(
+                            child: Text(
+                              dayPart,
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const Flexible(
+                            child: Text(
+                              " a las ",
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                        Flexible(
+                          child: Text(
+                            hourPart,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (suffixPart.isNotEmpty)
+                          Flexible(
+                            child: Text(
+                              " $suffixPart",
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                    )
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (dayPart.isNotEmpty) ...[
+                          Text(
+                            dayPart,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                            textAlign: TextAlign.center,
+                          ),
+                          const Text(
+                            "a las",
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                        Text(
+                          hourPart,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                          textAlign: TextAlign.center,
+                        ),
+                        if (suffixPart.isNotEmpty)
+                          Text(
+                            suffixPart,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                            textAlign: TextAlign.center,
+                          ),
+                      ],
+                    ),
             ),
           ),
           const SizedBox(height: 12),
-          const Spacer(),
           // Widget del clima
           if (weather != null && weather.hasData)
             Container(

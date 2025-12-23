@@ -15,14 +15,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   late AnimationController _animationController;
   late AnimationController _circleAnimationController;
   late AnimationController _floatingController;
-  late AnimationController _neonController;
   late AnimationController _finishController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _logoRotationAnimation;
   late Animation<double> _floatingAnimation;
-  late Animation<Color?> _neonColorAnimation;
 
   // Control de carga de assets
   double _loadingProgress = 0.0;
@@ -35,10 +33,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   final List<String> _criticalAssets = [
     'assets/logo.png',
     'assets/home_panels/buses.png',
-    'assets/home_panels/aysen.png',
-    'assets/home_panels/tunel.png',
-    'assets/home_panels/terminal_coy.png',
     'assets/home_panels/puente_aysen.png',
+    'assets/home_panels/terminal_coy.png',
+    'assets/home_panels/tunel.png',
+    'assets/home_panels/aysen.png',
     'assets/bg/background_route.png',
     'assets/ruta_240.png',
   ];
@@ -107,21 +105,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       curve: Curves.easeInOut,
     ));
 
-    // Controlador para efecto neón
-    _neonController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-
-    // Animación de color neón
-    _neonColorAnimation = ColorTween(
-      begin: MyApp.primaryOrange,
-      end: MyApp.accentBlue,
-    ).animate(CurvedAnimation(
-      parent: _neonController,
-      curve: Curves.easeInOut,
-    ));
-
     // Controlador para animación de finalización
     _finishController = AnimationController(
       vsync: this,
@@ -136,9 +119,9 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
   /// Precarga todos los assets críticos en segundo plano
   Future<void> _preloadAssets() async {
-    // Registrar el tiempo de inicio para garantizar un mínimo de 4 segundos
+    // Registrar el tiempo de inicio para garantizar un mínimo de 3 segundos
     final startTime = DateTime.now();
-    const minSplashDuration = Duration(seconds: 4);
+    const minSplashDuration = Duration(seconds: 3);
 
     try {
       setState(() {
@@ -206,46 +189,49 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
         await Future.delayed(const Duration(milliseconds: 200));
       }
 
-      // Navegar a Home con animación elaborada
+      // Navegar a Home con animación moderna estilo Material 3
       if (mounted) {
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) => const HomePage(),
+            transitionDuration: const Duration(milliseconds: 900),
+            reverseTransitionDuration: const Duration(milliseconds: 600),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              // Animación de fade
+              // Animación principal con curva moderna
+              final curvedAnimation = CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeInOutCubicEmphasized,
+                reverseCurve: Curves.easeOutCubic,
+              );
+
+              // Fade suave y rápido
               final fadeAnimation = Tween<double>(
                 begin: 0.0,
                 end: 1.0,
               ).animate(CurvedAnimation(
                 parent: animation,
-                curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
+                curve: const Interval(0.0, 0.4, curve: Curves.easeIn),
               ));
 
-              // Animación de escala (zoom in)
+              // Zoom in sutil tipo hero transition
               final scaleAnimation = Tween<double>(
-                begin: 0.85,
+                begin: 0.92,
                 end: 1.0,
-              ).animate(CurvedAnimation(
-                parent: animation,
-                curve: const Interval(0.0, 1.0, curve: Curves.easeOutCubic),
-              ));
+              ).animate(curvedAnimation);
 
-              // Animación de slide
+              // Slide vertical suave
               final slideAnimation = Tween<Offset>(
-                begin: const Offset(0.0, 0.08),
+                begin: const Offset(0.0, 0.05),
                 end: Offset.zero,
-              ).animate(CurvedAnimation(
-                parent: animation,
-                curve: const Interval(0.2, 1.0, curve: Curves.easeOutQuart),
-              ));
+              ).animate(curvedAnimation);
 
-              // Animación de fade out para el splash (opcional, para efecto cruzado)
+              // Fade out del splash (crossfade effect)
               final reverseFadeAnimation = Tween<double>(
                 begin: 1.0,
                 end: 0.0,
               ).animate(CurvedAnimation(
                 parent: animation,
-                curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
+                curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
               ));
 
               return Stack(
@@ -273,8 +259,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                 ],
               );
             },
-            transitionDuration: const Duration(milliseconds: 1200),
-            reverseTransitionDuration: const Duration(milliseconds: 800),
           ),
         );
       }
@@ -343,7 +327,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     _animationController.dispose();
     _circleAnimationController.dispose();
     _floatingController.dispose();
-    _neonController.dispose();
     _finishController.dispose();
     super.dispose();
   }
@@ -517,19 +500,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
-                              // Círculo de carga animado con efecto neón y rotación fluida
+                              // Círculo de carga simple y limpio
                               AnimatedBuilder(
-                                animation: Listenable.merge([_neonColorAnimation, _circleAnimationController, _finishController]),
+                                animation: Listenable.merge([_circleAnimationController, _finishController]),
                                 builder: (context, child) {
-                                  // Determinar el color basado en si está finalizando
-                                  final Color circleColor = _isFinishing
-                                      ? MyApp.accentBlue
-                                      : (_neonColorAnimation.value ?? MyApp.primaryOrange);
-
-                                  // Intensidad del brillo aumenta al finalizar
-                                  final double glowIntensity = _isFinishing ? 1.0 : 0.6;
-                                  final double glowBlur = _isFinishing ? 60.0 : 40.0;
-                                  final double glowSpread = _isFinishing ? 15.0 : 8.0;
+                                  // Color fijo naranja para el cargador
+                                  final Color circleColor = MyApp.primaryOrange;
 
                                   return Container(
                                     width: 260,
@@ -538,21 +514,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                                       shape: BoxShape.circle,
                                       boxShadow: [
                                         BoxShadow(
-                                          color: circleColor.withValues(alpha: glowIntensity),
-                                          blurRadius: glowBlur,
-                                          spreadRadius: glowSpread,
+                                          color: circleColor.withValues(alpha: 0.3),
+                                          blurRadius: 20.0,
+                                          spreadRadius: 5.0,
                                         ),
-                                        BoxShadow(
-                                          color: MyApp.accentBlue.withValues(alpha: _isFinishing ? 0.8 : 0.3),
-                                          blurRadius: _isFinishing ? 80.0 : 60.0,
-                                          spreadRadius: _isFinishing ? 25.0 : 15.0,
-                                        ),
-                                        if (_isFinishing)
-                                          BoxShadow(
-                                            color: MyApp.accentBlue.withValues(alpha: 0.6),
-                                            blurRadius: 100.0,
-                                            spreadRadius: 30.0,
-                                          ),
                                       ],
                                     ),
                                     child: RotationTransition(
@@ -561,63 +526,43 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                                         width: 260,
                                         height: 260,
                                         child: CircularProgressIndicator(
-                                          value: 0.75, // Valor fijo para crear el efecto de acelerador
-                                          strokeWidth: _isFinishing ? 8.0 : 6.0,
+                                          value: 0.75,
+                                          strokeWidth: 5.0,
                                           valueColor: AlwaysStoppedAnimation<Color>(circleColor),
-                                          backgroundColor: Colors.white.withValues(alpha: _isFinishing ? 0.3 : 0.15),
+                                          backgroundColor: Colors.white.withValues(alpha: 0.15),
                                         ),
                                       ),
                                     ),
                                   );
                                 },
                               ),
-                              // Logo circular en el centro con sombras animadas
-                              AnimatedBuilder(
-                                animation: Listenable.merge([_neonColorAnimation, _finishController]),
-                                builder: (context, child) {
-                                  final Color logoGlowColor = _isFinishing
-                                      ? MyApp.accentBlue
-                                      : (_neonColorAnimation.value ?? MyApp.primaryOrange);
-
-                                  return Container(
+                              // Logo circular en el centro con sombra simple
+                              Container(
+                                width: 220,
+                                height: 220,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: MyApp.primaryOrange.withValues(alpha: 0.3),
+                                      blurRadius: 25.0,
+                                      spreadRadius: 5.0,
+                                    ),
+                                    BoxShadow(
+                                      color: MyApp.primaryNavy.withValues(alpha: 0.4),
+                                      blurRadius: 40,
+                                      spreadRadius: 8,
+                                    ),
+                                  ],
+                                ),
+                                child: ClipOval(
+                                  child: Image.asset(
+                                    'assets/logocircle.png',
                                     width: 220,
                                     height: 220,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: logoGlowColor.withValues(alpha: _isFinishing ? 0.8 : 0.5),
-                                          blurRadius: _isFinishing ? 50.0 : 35.0,
-                                          spreadRadius: _isFinishing ? 10.0 : 5.0,
-                                        ),
-                                        BoxShadow(
-                                          color: MyApp.primaryNavy.withValues(alpha: 0.4),
-                                          blurRadius: 50,
-                                          spreadRadius: 10,
-                                        ),
-                                        BoxShadow(
-                                          color: MyApp.accentBlue.withValues(alpha: _isFinishing ? 0.7 : 0.3),
-                                          blurRadius: _isFinishing ? 90.0 : 70.0,
-                                          spreadRadius: _isFinishing ? 25.0 : 15.0,
-                                        ),
-                                        if (_isFinishing)
-                                          BoxShadow(
-                                            color: MyApp.accentBlue.withValues(alpha: 0.5),
-                                            blurRadius: 110.0,
-                                            spreadRadius: 35.0,
-                                          ),
-                                      ],
-                                    ),
-                                    child: ClipOval(
-                                      child: Image.asset(
-                                        'assets/logocircle.png',
-                                        width: 220,
-                                        height: 220,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  );
-                                },
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
                               ),
                             ],
                           ),

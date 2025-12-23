@@ -10,13 +10,13 @@ class SchedulesPage extends StatefulWidget {
   final String? currentDayCollection;
 
   const SchedulesPage({
-    Key? key,
+    super.key,
     required this.firestore,
     required this.holidays,
     this.nextAysenDeparture,
     this.nextCoyhaiqueDeparture,
     this.currentDayCollection,
-  }) : super(key: key);
+  });
 
   @override
   _SchedulesPageState createState() => _SchedulesPageState();

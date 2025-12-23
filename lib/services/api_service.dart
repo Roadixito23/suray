@@ -53,7 +53,7 @@ class ApiService {
         final result = <String, List<String>>{};
         data.forEach((key, value) {
           if (value is List) {
-            result[key] = (value as List)
+            result[key] = (value)
                 .map((item) => item['time'] as String)
                 .toList();
           }

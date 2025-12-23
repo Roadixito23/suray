@@ -5,7 +5,7 @@ import 'home.dart';
 import 'main.dart'; // Importar para acceder a los colores
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+  const SplashScreen({super.key});
 
   @override
   _SplashScreenState createState() => _SplashScreenState();

@@ -169,11 +169,11 @@ class CompactWeatherWidget extends StatelessWidget {
   final bool isLoading;
 
   const CompactWeatherWidget({
-    Key? key,
+    super.key,
     this.coyhaique,
     this.puertoAysen,
     required this.isLoading,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -296,11 +296,11 @@ class SuperCompactWeatherWidget extends StatelessWidget {
 
   // CORREGIDO: Se quitó el 'const' del constructor para evitar errores
   const SuperCompactWeatherWidget({
-    Key? key,
+    super.key,
     this.coyhaique,
     this.puertoAysen,
     required this.isLoading,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -13,7 +13,7 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   // --- NUEVA PALETA DE COLORES MODERNA ---
   static const Color primaryNavy = Color(0xFF001959); // Azul marino principal
@@ -60,8 +60,6 @@ class MyApp extends StatelessWidget {
           onSecondary: Colors.white,
           surface: surfaceWhite,
           onSurface: darkTextColor,
-          background: lightGreyBackground,
-          onBackground: darkTextColor,
           error: errorColor,
           onError: Colors.white,
           outline: borderColor,

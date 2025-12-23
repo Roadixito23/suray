@@ -4,7 +4,7 @@ import 'dart:math' as math;
 import 'main.dart';
 
 class HorizontalRouteMap extends StatefulWidget {
-  const HorizontalRouteMap({Key? key}) : super(key: key);
+  const HorizontalRouteMap({super.key});
 
   @override
   State<HorizontalRouteMap> createState() => _HorizontalRouteMapState();
@@ -138,7 +138,7 @@ class _HorizontalRouteMapState extends State<HorizontalRouteMap>
       appBar: AppBar(
         title: const Text(
           'Ruta 240 - Mapa Interactivo',
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),

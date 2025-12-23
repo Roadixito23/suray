@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math' as math;
 
 class MetroMapRoute extends StatefulWidget {
-  const MetroMapRoute({Key? key}) : super(key: key);
+  const MetroMapRoute({super.key});
 
   @override
   State<MetroMapRoute> createState() => _MetroMapRouteState();
@@ -322,7 +322,7 @@ class _MetroMapRouteState extends State<MetroMapRoute> with SingleTickerProvider
                                     true,
                                   ),
                                 );
-                              }).toList(),
+                              }),
 
                               // Estaciones interactivas
                               ..._buildStationWidgets(responsiveStations),

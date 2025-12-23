@@ -9,7 +9,7 @@ import 'main.dart';
 import 'dual_weather_service.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   _HomePageState createState() => _HomePageState();
@@ -205,14 +205,14 @@ class _HomePageState extends State<HomePage> {
 
   String? _findNextDepartureFromLists(List<String> todayTimes, List<String> tomorrowTimes) {
     final referenceTime = DateTime.now();
-    DateTime? _parseTime(String time, DateTime ref) {
+    DateTime? parseTime(String time, DateTime ref) {
       try {
         final p = time.split(':');
         return DateTime(ref.year, ref.month, ref.day, int.parse(p[0]), int.parse(p[1]));
       } catch (e) { return null; }
     }
     for (final time in todayTimes) {
-      final departureTime = _parseTime(time, referenceTime);
+      final departureTime = parseTime(time, referenceTime);
       if (departureTime != null && departureTime.isAfter(referenceTime)) {
         return "Hoy a las ${_formatTimeWithSuffix(time)}";
       }

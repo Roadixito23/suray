@@ -182,33 +182,24 @@ class _ContactPageState extends State<ContactPage>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: MyApp.primaryOrange.withOpacity(0.9),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: const Text(
-                                    'Buses Suray',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
                                 const Text(
-                                  'Información\nde Contacto',
+                                  'Ponte en Contacto',
                                   style: TextStyle(
                                     fontFamily: 'Hemiheads',
                                     fontSize: 32,
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
                                     height: 1.1,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                const Text(
+                                  'Para consultar por horarios, información sobre encomiendas o servicios especiales, puedes usar los siguientes canales de comunicación',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
+                                    height: 1.4,
                                   ),
                                 ),
                               ],
@@ -247,10 +238,6 @@ class _ContactPageState extends State<ContactPage>
                         opacity: _fadeAnimation,
                         child: Column(
                           children: [
-                            // Descripción principal
-                            _buildIntroCard(),
-                            const SizedBox(height: 24),
-
                             _buildLocationSection(),
 
                             const SizedBox(height: 24),
@@ -258,8 +245,8 @@ class _ContactPageState extends State<ContactPage>
                             // Tarjetas de contacto
                             _buildContactCard(
                               icon: Icons.email_rounded,
-                              title: 'Correo Electrónico',
-                              subtitle: 'Servicios Especiales',
+                              title: 'Servicios Especiales',
+                              subtitle: '',
                               content: 'suray.ltda@gmail.com',
                               color: MyApp.primaryOrange,
                               delay: 200,
@@ -326,7 +313,7 @@ class _ContactPageState extends State<ContactPage>
           ),
           const SizedBox(height: 8),
           Text(
-            'Para servicios especiales, consultar horarios o información sobre encomiendas, puedes usar los siguientes canales de comunicación.',
+            'Para consultar por horarios, información sobre encomiendas o servicios especiales, puedes usar los siguientes canales de comunicación:',
             style: Theme.of(context).textTheme.bodyMedium,
             textAlign: TextAlign.center,
           ),
@@ -368,88 +355,105 @@ class _ContactPageState extends State<ContactPage>
                 color: color.withOpacity(0.2),
                 width: 1,
               ),
+              image: const DecorationImage(
+                image: AssetImage('assets/home_panels/buses.png'),
+                fit: BoxFit.cover,
+                opacity: 0.1,
+              ),
             ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [color, color.withOpacity(0.8)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: color.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [color, color.withOpacity(0.8)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                    ],
-                  ),
-                  child: Icon(icon, color: Colors.white, size: 24),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: color,
-                          fontWeight: FontWeight.w500,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: color.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      InkWell(
-                        onTap: onTap,
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
+                      ],
+                    ),
+                    child: Icon(icon, color: Colors.white, size: 24),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: color,
+                            fontWeight: FontWeight.bold,
                           ),
-                          decoration: BoxDecoration(
-                            color: color.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: color.withOpacity(0.3),
-                              width: 1,
+                        ),
+                        if (subtitle.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: color,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  content,
-                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: color,
+                        ],
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: onTap,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: color.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: color.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    content,
+                                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: color,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 6),
-                              Icon(
-                                Icons.touch_app_rounded,
-                                size: 14,
-                                color: color.withOpacity(0.5),
-                              ),
-                            ],
+                                const SizedBox(width: 6),
+                                Icon(
+                                  Icons.touch_app_rounded,
+                                  size: 14,
+                                  color: color.withOpacity(0.5),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -460,34 +464,30 @@ class _ContactPageState extends State<ContactPage>
   Widget _buildLocationSection() {
     return Column(
       children: [
-        const SizedBox(height: 16),
-        Text(
-          'Nuestras Oficinas',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 16),
+
 
         // Puerto Aysén
         _buildLocationCard(
           city: 'Puerto Aysén',
           locations: [
             LocationInfo(
-              type: 'Oficina Principal',
+              type: 'Oficina de venta de pasajes',
               address: 'Eusebio Ibar 630, Aysén',
               phone: '672 336222',
               icon: Icons.business_rounded,
               mapUrl: 'https://maps.app.goo.gl/1nv7mAcGRpFVPMacA',
             ),
             LocationInfo(
-              type: 'Correspondencia',
+              type: 'Oficina de correspondencia',
               address: 'Eusebio Ibar 630, Aysén',
               phone: '672 336231',
-              icon: Icons.local_shipping_rounded,
+              icon: Icons.business_rounded,
               mapUrl: 'https://maps.app.goo.gl/1nv7mAcGRpFVPMacA',
             ),
           ],
           color: MyApp.primaryNavy,
           delay: 300,
+          backgroundImage: 'assets/home_panels/aysen.png',
         ),
 
         const SizedBox(height: 20),
@@ -497,22 +497,23 @@ class _ContactPageState extends State<ContactPage>
           city: 'Coyhaique',
           locations: [
             LocationInfo(
-              type: 'Terminal Municipal',
-              address: 'Terminal Municipal de Coyhaique, Oficina N°2',
+              type: 'Oficina de venta de pasajes',
+              address: 'Terminal Municipal, Avenida Norte Sur 1280, Oficina N°2',
               phone: '672 212639',
               icon: Icons.location_city_rounded,
               mapUrl: 'https://maps.app.goo.gl/9AJMknQmkmf3tHSo8',
             ),
             LocationInfo(
-              type: 'Correspondencia',
+              type: 'Oficina de correspondencia',
               address: 'Arturo Prat 265, Coyhaique',
               phone: '672 234085',
-              icon: Icons.local_shipping_rounded,
+              icon: Icons.location_city_rounded,
               mapUrl: 'https://maps.app.goo.gl/pMdzjb5y1Mg1iNQd9',
             ),
           ],
           color: MyApp.accentBlue,
           delay: 400,
+          backgroundImage: 'assets/home_panels/coyhaique.jpg',
         ),
       ],
     );
@@ -523,6 +524,7 @@ class _ContactPageState extends State<ContactPage>
     required List<LocationInfo> locations,
     required Color color,
     int delay = 0,
+    String? backgroundImage,
   }) {
     return AnimatedContainer(
       duration: Duration(milliseconds: 600 + delay),
@@ -543,6 +545,13 @@ class _ContactPageState extends State<ContactPage>
             color: color.withOpacity(0.2),
             width: 1,
           ),
+          image: backgroundImage != null
+              ? DecorationImage(
+                  image: AssetImage(backgroundImage),
+                  fit: BoxFit.cover,
+                  opacity: 0.4,
+                )
+              : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,118 +594,124 @@ class _ContactPageState extends State<ContactPage>
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
+        color: Colors.white.withOpacity(0.9),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: color.withOpacity(0.1),
           width: 1,
         ),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(info.icon, color: color, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(info.icon, color: color, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
                   info.type,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                     color: color,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  info.address,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    InkWell(
-                      onTap: () => _makePhoneCall(info.phone),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(Icons.location_on_rounded,
+                  size: 20,
+                  color: color),
+              const SizedBox(width: 12),
+              Expanded(
+                child: InkWell(
+                  onTap: () => _openMap(info.mapUrl),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: color.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.phone_rounded,
-                                size: 16,
-                                color: color),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                info.phone,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: color,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Icon(
-                              Icons.touch_app_rounded,
-                              size: 14,
-                              color: color.withOpacity(0.5),
-                            ),
-                          ],
-                        ),
+                      border: Border.all(
+                        color: color.withOpacity(0.3),
+                        width: 1,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    InkWell(
-                      onTap: () => _openMap(info.mapUrl),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: color.withOpacity(0.3),
-                            width: 1,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            info.address,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: color,
+                            ),
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.map_rounded,
-                                size: 16,
-                                color: color),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Abrir Mapa',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: color,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Icon(
-                              Icons.touch_app_rounded,
-                              size: 14,
-                              color: color.withOpacity(0.5),
-                            ),
-                          ],
+                        const SizedBox(width: 6),
+                        Icon(
+                          Icons.touch_app_rounded,
+                          size: 14,
+                          color: color.withOpacity(0.5),
                         ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(Icons.phone_rounded,
+                  size: 20,
+                  color: color),
+              const SizedBox(width: 12),
+              Expanded(
+                child: InkWell(
+                  onTap: () => _makePhoneCall(info.phone),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: color.withOpacity(0.3),
+                        width: 1,
                       ),
                     ),
-                  ],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            info.phone,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: color,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Icon(
+                          Icons.touch_app_rounded,
+                          size: 14,
+                          color: color.withOpacity(0.5),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),

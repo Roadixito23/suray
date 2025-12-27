@@ -211,15 +211,27 @@ class _HomePageState extends State<HomePage> {
         return DateTime(ref.year, ref.month, ref.day, int.parse(p[0]), int.parse(p[1]));
       } catch (e) { return null; }
     }
+    
+    // Verificar si hay salidas hoy después de la hora actual
+    bool hasTodayDepartures = false;
     for (final time in todayTimes) {
       final departureTime = parseTime(time, referenceTime);
       if (departureTime != null && departureTime.isAfter(referenceTime)) {
+        hasTodayDepartures = true;
         return "Hoy a las ${_formatTimeWithSuffix(time)}";
       }
     }
+    
+    // Si no hay más salidas hoy, verificar mañana
     if (tomorrowTimes.isNotEmpty) {
       return "Mañana a las ${_formatTimeWithSuffix(tomorrowTimes.first)}";
     }
+    
+    // Si no hay salidas ni hoy ni mañana
+    if (!hasTodayDepartures && tomorrowTimes.isEmpty) {
+      return "Sin salidas próximas";
+    }
+    
     return null;
   }
 
@@ -582,6 +594,62 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildDepartureInfoColumn(String city, String time, CompactWeatherData? weather) {
+    // Caso especial: Sin salidas próximas
+    if (time == "Sin salidas próximas") {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white.withOpacity(0.2)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              city,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.8),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.event_busy_rounded,
+                    color: Colors.white70,
+                    size: 32,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    "Sin salidas\npróximas",
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
     // Extraer componentes: día (Hoy/Mañana), hora y sufijo
     String dayPart = '';
     String hourPart = '';

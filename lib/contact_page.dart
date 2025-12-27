@@ -194,7 +194,7 @@ class _ContactPageState extends State<ContactPage>
                                 ),
                                 const SizedBox(height: 12),
                                 const Text(
-                                  'Para consultar por horarios, información sobre encomiendas o servicios especiales, puedes usar los siguientes canales de comunicación',
+                                  'Para consultar por horarios, información sobre encomiendas o servicios especiales, puedes usar los siguientes canales de comunicación:',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 14,
@@ -243,15 +243,7 @@ class _ContactPageState extends State<ContactPage>
                             const SizedBox(height: 24),
 
                             // Tarjetas de contacto
-                            _buildContactCard(
-                              icon: Icons.email_rounded,
-                              title: 'Servicios Especiales',
-                              subtitle: '',
-                              content: 'suray.ltda@gmail.com',
-                              color: MyApp.primaryOrange,
-                              delay: 200,
-                              onTap: () => _sendEmail('suray.ltda@gmail.com'),
-                            ),
+                            _buildSpecialServicesCard(),
                           ],
                         ),
                       ),
@@ -472,14 +464,14 @@ class _ContactPageState extends State<ContactPage>
           locations: [
             LocationInfo(
               type: 'Oficina de venta de pasajes',
-              address: 'Eusebio Ibar 630, Aysén',
+              address: 'Eusebio Ibar 630',
               phone: '672 336222',
               icon: Icons.business_rounded,
               mapUrl: 'https://maps.app.goo.gl/1nv7mAcGRpFVPMacA',
             ),
             LocationInfo(
               type: 'Oficina de correspondencia',
-              address: 'Eusebio Ibar 630, Aysén',
+              address: 'Eusebio Ibar 630 (interior)',
               phone: '672 336231',
               icon: Icons.business_rounded,
               mapUrl: 'https://maps.app.goo.gl/1nv7mAcGRpFVPMacA',
@@ -505,7 +497,7 @@ class _ContactPageState extends State<ContactPage>
             ),
             LocationInfo(
               type: 'Oficina de correspondencia',
-              address: 'Arturo Prat 265, Coyhaique',
+              address: 'Arturo Prat 265 (interior)',
               phone: '672 234085',
               icon: Icons.location_city_rounded,
               mapUrl: 'https://maps.app.goo.gl/pMdzjb5y1Mg1iNQd9',
@@ -516,6 +508,108 @@ class _ContactPageState extends State<ContactPage>
           backgroundImage: 'assets/home_panels/coyhaique.jpg',
         ),
       ],
+    );
+  }
+
+  Widget _buildSpecialServicesCard() {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 800),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: MyApp.surfaceWhite,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: MyApp.primaryOrange.withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: MyApp.primaryOrange.withOpacity(0.2),
+            width: 1,
+          ),
+          image: const DecorationImage(
+            image: AssetImage('assets/home_panels/buses.png'),
+            fit: BoxFit.cover,
+            opacity: 0.4,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Servicios Especiales',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: MyApp.primaryOrange,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: MyApp.primaryOrange.withOpacity(0.1),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Icon(Icons.email_rounded,
+                      size: 20,
+                      color: MyApp.primaryOrange),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _sendEmail('suray.ltda@gmail.com'),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: MyApp.primaryOrange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: MyApp.primaryOrange.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                'suray.ltda@gmail.com',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: MyApp.primaryOrange,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Icon(
+                              Icons.touch_app_rounded,
+                              size: 14,
+                              color: MyApp.primaryOrange.withOpacity(0.5),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -556,30 +650,11 @@ class _ContactPageState extends State<ContactPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [color, color.withOpacity(0.8)],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.location_on_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  city,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: color,
-                  ),
-                ),
-              ],
+            Text(
+              city,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: color,
+              ),
             ),
             const SizedBox(height: 20),
             ...locations.map((location) => _buildLocationItem(location, color)),

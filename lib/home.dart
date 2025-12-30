@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'contact_page.dart';
 import 'schedules_page.dart';
+import 'paraderos_page.dart';
 import 'main.dart';
 import 'dual_weather_service.dart';
 
@@ -44,6 +45,13 @@ class _HomePageState extends State<HomePage> {
   Timer? _imageRotationTimer;
   int _currentPage = 0;
 
+  // Variables para modo debug
+  bool _debugModeEnabled = false;
+  final TextEditingController _debugController = TextEditingController();
+  int _logoTapCount = 0;
+  Timer? _logoTapTimer;
+  bool _logoLongPressed = false;
+
   @override
   void initState() {
     super.initState();
@@ -71,14 +79,33 @@ class _HomePageState extends State<HomePage> {
         });
       }
     });
+
+    // Listener para detectar "debug"
+    _debugController.addListener(() {
+      if (_debugController.text.toLowerCase() == 'debug') {
+        setState(() {
+          _debugModeEnabled = true;
+        });
+        _debugController.clear();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Modo debug activado'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
     _timeContextTimer?.cancel();
     _imageRotationTimer?.cancel();
-    _weatherUpdateTimer?.cancel(); // Nuevo
+    _weatherUpdateTimer?.cancel();
+    _logoTapTimer?.cancel();
     _pageController.dispose();
+    _debugController.dispose();
     for (var sub in _streamSubscriptions) {
       sub.cancel();
     }
@@ -96,8 +123,12 @@ class _HomePageState extends State<HomePage> {
 
       if (mounted) {
         setState(() {
-          _coyhaqueWeather = CompactWeatherData.fromJson(weatherData['coyhaique']);
-          _puertoAysenWeather = CompactWeatherData.fromJson(weatherData['puertoAysen']);
+          _coyhaqueWeather = CompactWeatherData.fromJson(
+            weatherData['coyhaique'],
+          );
+          _puertoAysenWeather = CompactWeatherData.fromJson(
+            weatherData['puertoAysen'],
+          );
           _isWeatherLoading = false;
         });
       }
@@ -133,11 +164,18 @@ class _HomePageState extends State<HomePage> {
   Future<void> _loadHolidays() async {
     try {
       final currentYear = DateTime.now().year;
-      final snapshot = await _firestore.collection('feriados').doc(currentYear.toString()).get();
+      final snapshot =
+          await _firestore
+              .collection('feriados')
+              .doc(currentYear.toString())
+              .get();
       if (snapshot.exists && snapshot.data() != null) {
         final data = snapshot.data()!;
         _holidays = Map<String, Map<String, dynamic>>.from(
-            data.map((key, value) => MapEntry(key, Map<String, dynamic>.from(value))));
+          data.map(
+            (key, value) => MapEntry(key, Map<String, dynamic>.from(value)),
+          ),
+        );
       }
       _checkIfTodayIsHoliday();
     } catch (e) {
@@ -157,27 +195,57 @@ class _HomePageState extends State<HomePage> {
     String tomorrowCollection = _getDayCollection(tomorrow);
     _currentDayCollection = todayCollection;
 
-    _listenToSchedule('aysen', todayCollection, (times) => _aysenTodayTimes = times);
-    _listenToSchedule('aysen', tomorrowCollection, (times) => _aysenTomorrowTimes = times);
-    _listenToSchedule('coyhaique', todayCollection, (times) => _coyhaiqueTodayTimes = times);
-    _listenToSchedule('coyhaique', tomorrowCollection, (times) => _coyhaiqueTomorrowTimes = times);
+    _listenToSchedule(
+      'aysen',
+      todayCollection,
+      (times) => _aysenTodayTimes = times,
+    );
+    _listenToSchedule(
+      'aysen',
+      tomorrowCollection,
+      (times) => _aysenTomorrowTimes = times,
+    );
+    _listenToSchedule(
+      'coyhaique',
+      todayCollection,
+      (times) => _coyhaiqueTodayTimes = times,
+    );
+    _listenToSchedule(
+      'coyhaique',
+      tomorrowCollection,
+      (times) => _coyhaiqueTomorrowTimes = times,
+    );
   }
 
-  void _listenToSchedule(String region, String dayCollection, void Function(List<String>) onData) {
+  void _listenToSchedule(
+    String region,
+    String dayCollection,
+    void Function(List<String>) onData,
+  ) {
     var subscription = _firestore
-        .collection('horarios').doc(region).collection(dayCollection).orderBy('time')
+        .collection('horarios')
+        .doc(region)
+        .collection(dayCollection)
+        .orderBy('time')
         .snapshots()
         .listen((snapshot) {
-      final times = snapshot.docs.map((doc) => doc.data()['time'] as String).toList();
-      onData(times);
-      _recalculateAndSetDepartures();
-    });
+          final times =
+              snapshot.docs.map((doc) => doc.data()['time'] as String).toList();
+          onData(times);
+          _recalculateAndSetDepartures();
+        });
     _streamSubscriptions.add(subscription);
   }
 
   void _recalculateAndSetDepartures() {
-    final nextAysen = _findNextDepartureFromLists(_aysenTodayTimes, _aysenTomorrowTimes);
-    final nextCoyhaique = _findNextDepartureFromLists(_coyhaiqueTodayTimes, _coyhaiqueTomorrowTimes);
+    final nextAysen = _findNextDepartureFromLists(
+      _aysenTodayTimes,
+      _aysenTomorrowTimes,
+    );
+    final nextCoyhaique = _findNextDepartureFromLists(
+      _coyhaiqueTodayTimes,
+      _coyhaiqueTomorrowTimes,
+    );
     if (mounted) {
       setState(() {
         _nextAysenDeparture = nextAysen;
@@ -203,15 +271,26 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  String? _findNextDepartureFromLists(List<String> todayTimes, List<String> tomorrowTimes) {
+  String? _findNextDepartureFromLists(
+    List<String> todayTimes,
+    List<String> tomorrowTimes,
+  ) {
     final referenceTime = DateTime.now();
     DateTime? parseTime(String time, DateTime ref) {
       try {
         final p = time.split(':');
-        return DateTime(ref.year, ref.month, ref.day, int.parse(p[0]), int.parse(p[1]));
-      } catch (e) { return null; }
+        return DateTime(
+          ref.year,
+          ref.month,
+          ref.day,
+          int.parse(p[0]),
+          int.parse(p[1]),
+        );
+      } catch (e) {
+        return null;
+      }
     }
-    
+
     // Verificar si hay salidas hoy después de la hora actual
     bool hasTodayDepartures = false;
     for (final time in todayTimes) {
@@ -221,24 +300,26 @@ class _HomePageState extends State<HomePage> {
         return "Hoy a las ${_formatTimeWithSuffix(time)}";
       }
     }
-    
+
     // Si no hay más salidas hoy, verificar mañana
     if (tomorrowTimes.isNotEmpty) {
       return "Mañana a las ${_formatTimeWithSuffix(tomorrowTimes.first)}";
     }
-    
+
     // Si no hay salidas ni hoy ni mañana
     if (!hasTodayDepartures && tomorrowTimes.isEmpty) {
       return "Sin salidas próximas";
     }
-    
+
     return null;
   }
 
   void _checkIfTodayIsHoliday() {
     final now = DateTime.now();
-    final todayKey = "${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-    if (_holidays.containsKey(todayKey) && _holidays[todayKey]!['activo'] == true) {
+    final todayKey =
+        "${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+    if (_holidays.containsKey(todayKey) &&
+        _holidays[todayKey]!['activo'] == true) {
       _isTodayHoliday = true;
       _todayHolidayName = _holidays[todayKey]!['nombre'];
     } else {
@@ -248,8 +329,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   bool _isDateHoliday(DateTime date) {
-    final dateKey = "${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-    return _holidays.containsKey(dateKey) && _holidays[dateKey]!['activo'] == true;
+    final dateKey =
+        "${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+    return _holidays.containsKey(dateKey) &&
+        _holidays[dateKey]!['activo'] == true;
   }
 
   String _getDayCollection(DateTime date) {
@@ -259,9 +342,77 @@ class _HomePageState extends State<HomePage> {
     return 'domingosFeriados';
   }
 
-  String _getDayName(int weekday) => {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado', 7: 'Domingo'}[weekday] ?? 'Desconocido';
+  String _getDayName(int weekday) =>
+      {
+        1: 'Lunes',
+        2: 'Martes',
+        3: 'Miércoles',
+        4: 'Jueves',
+        5: 'Viernes',
+        6: 'Sábado',
+        7: 'Domingo',
+      }[weekday] ??
+      'Desconocido';
 
-  String _getMonthAbbreviation(int month) => {1: 'ENE', 2: 'FEB', 3: 'MAR', 4: 'ABR', 5: 'MAY', 6: 'JUN', 7: 'JUL', 8: 'AGO', 9: 'SEP', 10: 'OCT', 11: 'NOV', 12: 'DIC'}[month] ?? '';
+  String _getMonthAbbreviation(int month) =>
+      {
+        1: 'ENE',
+        2: 'FEB',
+        3: 'MAR',
+        4: 'ABR',
+        5: 'MAY',
+        6: 'JUN',
+        7: 'JUL',
+        8: 'AGO',
+        9: 'SEP',
+        10: 'OCT',
+        11: 'NOV',
+        12: 'DIC',
+      }[month] ??
+      '';
+
+  // Método para manejar los taps en el botón Paraderos
+  void _handleParaderosTap() {
+    if (_debugModeEnabled) {
+      // Si el modo debug está activado, navegar directamente
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ParaderosPage()),
+      );
+    } else if (_logoLongPressed) {
+      // Si el logo fue presionado por 5 segundos, contar taps
+      _logoTapTimer?.cancel();
+      _logoTapCount++;
+
+      if (_logoTapCount >= 5) {
+        // Activar modo debug después de 5 taps
+        setState(() {
+          _debugModeEnabled = true;
+          _logoTapCount = 0;
+          _logoLongPressed = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Modo debug activado - Ruta desbloqueado'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Navegar a paraderos
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ParaderosPage()),
+        );
+      } else {
+        // Resetear contador después de 2 segundos de inactividad
+        _logoTapTimer = Timer(const Duration(seconds: 2), () {
+          setState(() {
+            _logoTapCount = 0;
+          });
+        });
+      }
+    }
+  }
 
   // --- WIDGETS DE LA PÁGINA DE INICIO ---
 
@@ -278,10 +429,7 @@ class _HomePageState extends State<HomePage> {
               controller: _pageController,
               itemCount: _panelImages.length,
               itemBuilder: (context, index) {
-                return Image.asset(
-                  _panelImages[index],
-                  fit: BoxFit.cover,
-                );
+                return Image.asset(_panelImages[index], fit: BoxFit.cover);
               },
             ),
 
@@ -294,7 +442,7 @@ class _HomePageState extends State<HomePage> {
                   colors: [
                     MyApp.primaryNavy.withOpacity(0.8),
                     Colors.transparent,
-                    MyApp.primaryNavy.withOpacity(0.9)
+                    MyApp.primaryNavy.withOpacity(0.9),
                   ],
                   stops: const [0.0, 0.4, 1.0],
                 ),
@@ -307,50 +455,82 @@ class _HomePageState extends State<HomePage> {
                 child: OrientationBuilder(
                   builder: (context, orientation) {
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: 70.0),
+                      padding: const EdgeInsets.only(bottom: 110.0),
                       child: Column(
                         children: [
                           // Header adaptable según orientación
                           _buildHeader(orientation),
 
+                          // TextField oculto para activar debug
+                          if (!_debugModeEnabled)
+                            Opacity(
+                              opacity: 0.0,
+                              child: SizedBox(
+                                height: 0,
+                                width: 0,
+                                child: TextField(
+                                  controller: _debugController,
+                                  autofocus: false,
+                                ),
+                              ),
+                            ),
+
                           // Contenido principal
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20.0,
+                            ),
                             child: Column(
                               children: [
                                 // Tarjeta de Información del Día
                                 _buildCurrentDayInfo(),
 
-                                const SizedBox(height: 20),
+                                const SizedBox(height: 5),
 
                                 // Botón de Horarios con texto responsive
                                 ElevatedButton(
                                   onPressed: () {
                                     Navigator.push(
                                       context,
-                                      MaterialPageRoute(builder: (context) => SchedulesPage(
-                                        firestore: _firestore,
-                                        holidays: _holidays,
-                                        nextAysenDeparture: _nextAysenDeparture,
-                                        nextCoyhaiqueDeparture: _nextCoyhaiqueDeparture,
-                                        currentDayCollection: _currentDayCollection,
-                                      )),
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => SchedulesPage(
+                                              firestore: _firestore,
+                                              holidays: _holidays,
+                                              nextAysenDeparture:
+                                                  _nextAysenDeparture,
+                                              nextCoyhaiqueDeparture:
+                                                  _nextCoyhaiqueDeparture,
+                                              currentDayCollection:
+                                                  _currentDayCollection,
+                                            ),
+                                      ),
                                     );
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.black,
                                     foregroundColor: MyApp.primaryOrange,
-                                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-                                    minimumSize: const Size(double.infinity, 60),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                      horizontal: 20,
+                                    ),
+                                    minimumSize: const Size(
+                                      double.infinity,
+                                      60,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
                                     elevation: 3,
-                                    shadowColor: MyApp.primaryOrange.withOpacity(0.4),
+                                    shadowColor: MyApp.primaryOrange
+                                        .withOpacity(0.4),
                                   ),
                                   child: FittedBox(
                                     fit: BoxFit.scaleDown,
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Image.asset(
                                           'assets/icons/bus_reloj.png',
@@ -358,7 +538,7 @@ class _HomePageState extends State<HomePage> {
                                           height: 28,
                                           fit: BoxFit.contain,
                                         ),
-                                        const SizedBox(width: 12),
+                                        const SizedBox(width: 2),
                                         const Text(
                                           'TODOS LOS HORARIOS',
                                           style: TextStyle(
@@ -387,12 +567,7 @@ class _HomePageState extends State<HomePage> {
             ),
 
             // 4. Footer siempre visible en la parte inferior
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: _buildFooter(),
-            ),
+            Positioned(bottom: 0, left: 0, right: 0, child: _buildFooter()),
           ],
         ),
       ),
@@ -408,16 +583,40 @@ class _HomePageState extends State<HomePage> {
           children: [
             // Logo centrado
             Center(
-              child: Image.asset('assets/logo.png', height: 80, fit: BoxFit.contain),
+              child: GestureDetector(
+                onLongPressStart: (_) {
+                  setState(() {
+                    _logoLongPressed = true;
+                  });
+                },
+                onLongPressEnd: (_) {
+                  Future.delayed(const Duration(seconds: 5), () {
+                    setState(() {
+                      _logoLongPressed = false;
+                    });
+                  });
+                },
+                child: Image.asset(
+                  'assets/logo.png',
+                  height: 80,
+                  fit: BoxFit.contain,
+                ),
+              ),
             ),
             const SizedBox(height: 16),
             // Botones centrados debajo del logo
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildHeroNavButton('Ubícanos', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContactPage()))),
+                _buildHeroNavButton(
+                  'Ubícanos',
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ContactPage()),
+                  ),
+                ),
                 const SizedBox(width: 10),
-                _buildHeroNavButton('Paraderos', () {}), // Deshabilitado temporalmente
+                _buildHeroNavButton('Ruta', _handleParaderosTap),
               ],
             ),
           ],
@@ -430,12 +629,36 @@ class _HomePageState extends State<HomePage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Image.asset('assets/logo.png', height: 80, fit: BoxFit.contain),
+            GestureDetector(
+              onLongPressStart: (_) {
+                setState(() {
+                  _logoLongPressed = true;
+                });
+              },
+              onLongPressEnd: (_) {
+                Future.delayed(const Duration(seconds: 5), () {
+                  setState(() {
+                    _logoLongPressed = false;
+                  });
+                });
+              },
+              child: Image.asset(
+                'assets/logo.png',
+                height: 80,
+                fit: BoxFit.contain,
+              ),
+            ),
             Row(
               children: [
-                _buildHeroNavButton('Ubícanos', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContactPage()))),
+                _buildHeroNavButton(
+                  'Ubícanos',
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ContactPage()),
+                  ),
+                ),
                 const SizedBox(width: 10),
-                _buildHeroNavButton('Paraderos', () {}), // Deshabilitado temporalmente
+                _buildHeroNavButton('Ruta', _handleParaderosTap),
               ],
             ),
           ],
@@ -468,9 +691,10 @@ class _HomePageState extends State<HomePage> {
     final dayName = _getDayName(now.weekday);
     final dayNumber = now.day;
     final monthAbbr = _getMonthAbbreviation(now.month);
-    Color cardColor = _isTodayHoliday
-        ? MyApp.errorColor.withOpacity(0.9)
-        : MyApp.primaryNavy.withOpacity(0.9);
+    Color cardColor =
+        _isTodayHoliday
+            ? MyApp.errorColor.withOpacity(0.9)
+            : MyApp.primaryNavy.withOpacity(0.9);
 
     return Container(
       width: double.infinity,
@@ -478,10 +702,7 @@ class _HomePageState extends State<HomePage> {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.2),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
         boxShadow: [
           BoxShadow(
             color: MyApp.primaryNavy.withOpacity(0.3),
@@ -506,18 +727,19 @@ class _HomePageState extends State<HomePage> {
                 child: SizedBox(
                   width: 48,
                   height: 48,
-                  child: _isTodayHoliday
-                      ? Icon(
-                          Icons.celebration,
-                          color: Colors.white,
-                          size: 48,
-                        )
-                      : Image.asset(
-                          'assets/icons/calendario_reloj.png',
-                          width: 48,
-                          height: 48,
-                          fit: BoxFit.contain,
-                        ),
+                  child:
+                      _isTodayHoliday
+                          ? Icon(
+                            Icons.celebration,
+                            color: Colors.white,
+                            size: 48,
+                          )
+                          : Image.asset(
+                            'assets/icons/calendario_reloj.png',
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.contain,
+                          ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -536,7 +758,6 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
           const Divider(color: Colors.white24, height: 24),
           Center(
             child: Container(
@@ -559,17 +780,19 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 12),
           if (_nextAysenDeparture == null && _nextCoyhaiqueDeparture == null)
-            const Center(child: Padding(
-              padding: EdgeInsets.all(8.0),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 3,
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(8.0),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 3,
+                  ),
                 ),
               ),
-            ))
+            )
           else
             IntrinsicHeight(
               child: Row(
@@ -577,23 +800,36 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   if (_nextAysenDeparture != null)
                     Expanded(
-                      child: _buildDepartureInfoColumn('Desde Aysén', _nextAysenDeparture!, _puertoAysenWeather),
+                      child: _buildDepartureInfoColumn(
+                        'Desde Aysén',
+                        _nextAysenDeparture!,
+                        _puertoAysenWeather,
+                      ),
                     ),
-                  if (_nextAysenDeparture != null && _nextCoyhaiqueDeparture != null)
+                  if (_nextAysenDeparture != null &&
+                      _nextCoyhaiqueDeparture != null)
                     const SizedBox(width: 12),
                   if (_nextCoyhaiqueDeparture != null)
                     Expanded(
-                      child: _buildDepartureInfoColumn('Desde Coyhaique', _nextCoyhaiqueDeparture!, _coyhaqueWeather),
+                      child: _buildDepartureInfoColumn(
+                        'Desde Coyhaique',
+                        _nextCoyhaiqueDeparture!,
+                        _coyhaqueWeather,
+                      ),
                     ),
                 ],
               ),
-            )
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildDepartureInfoColumn(String city, String time, CompactWeatherData? weather) {
+  Widget _buildDepartureInfoColumn(
+    String city,
+    String time,
+    CompactWeatherData? weather,
+  ) {
     // Caso especial: Sin salidas próximas
     if (time == "Sin salidas próximas") {
       return Container(
@@ -649,19 +885,21 @@ class _HomePageState extends State<HomePage> {
         ),
       );
     }
-    
+
     // Extraer componentes: día (Hoy/Mañana), hora y sufijo
     String dayPart = '';
     String hourPart = '';
     String suffixPart = '';
-    
+
     if (time.contains(' a las ')) {
       final parts = time.split(' a las ');
       dayPart = parts[0]; // "Hoy" o "Mañana"
       final timePart = parts[1]; // "16:30 hrs." o "8:00 am"
-      
+
       // Separar hora del sufijo
-      final timeMatch = RegExp(r'^(\d{1,2}:\d{2})\s*(.*)$').firstMatch(timePart);
+      final timeMatch = RegExp(
+        r'^(\d{1,2}:\d{2})\s*(.*)$',
+      ).firstMatch(timePart);
       if (timeMatch != null) {
         hourPart = timeMatch.group(1) ?? timePart;
         suffixPart = timeMatch.group(2) ?? '';
@@ -673,7 +911,8 @@ class _HomePageState extends State<HomePage> {
     }
 
     // Usar MediaQuery para determinar orientación
-    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -685,14 +924,21 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         mainAxisSize: MainAxisSize.max,
         children: [
-          Text(
-            city,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.8),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
+          SizedBox(
+            height: 36, // Altura fija para mantener simetría entre ambos títulos
+            child: Center(
+              child: Text(
+                city,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Expanded(
@@ -704,73 +950,106 @@ class _HomePageState extends State<HomePage> {
                 color: MyApp.primaryOrange,
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: isLandscape
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        if (dayPart.isNotEmpty) ...[
+              child:
+                  isLandscape
+                      ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          if (dayPart.isNotEmpty) ...[
+                            Flexible(
+                              child: Text(
+                                dayPart,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const Flexible(
+                              child: Text(
+                                " a las ",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                           Flexible(
                             child: Text(
+                              hourPart,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (suffixPart.isNotEmpty)
+                            Flexible(
+                              child: Text(
+                                " $suffixPart",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                        ],
+                      )
+                      : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          if (dayPart.isNotEmpty) ...[
+                            Text(
                               dayPart,
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                          ),
-                          const Flexible(
-                            child: Text(
-                              " a las ",
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-                              overflow: TextOverflow.ellipsis,
+                            const Text(
+                              "a las",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                          ),
-                        ],
-                        Flexible(
-                          child: Text(
+                          ],
+                          Text(
                             hourPart,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (suffixPart.isNotEmpty)
-                          Flexible(
-                            child: Text(
-                              " $suffixPart",
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-                              overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
                             ),
-                          ),
-                      ],
-                    )
-                  : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        if (dayPart.isNotEmpty) ...[
-                          Text(
-                            dayPart,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
                             textAlign: TextAlign.center,
                           ),
-                          const Text(
-                            "a las",
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-                            textAlign: TextAlign.center,
-                          ),
+                          if (suffixPart.isNotEmpty)
+                            Text(
+                              suffixPart,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
                         ],
-                        Text(
-                          hourPart,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-                          textAlign: TextAlign.center,
-                        ),
-                        if (suffixPart.isNotEmpty)
-                          Text(
-                            suffixPart,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-                            textAlign: TextAlign.center,
-                          ),
-                      ],
-                    ),
+                      ),
             ),
           ),
           const SizedBox(height: 12),
@@ -842,7 +1121,9 @@ class _HomePageState extends State<HomePage> {
 
   // Función para abrir Instagram
   Future<void> _openInstagram() async {
-    final Uri url = Uri.parse('https://www.instagram.com/buses.suray.cargo?igsh=azU1Z2MxbGZiMTZr');
+    final Uri url = Uri.parse(
+      'https://www.instagram.com/buses.suray.cargo?igsh=azU1Z2MxbGZiMTZr',
+    );
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       debugPrint('No se pudo abrir la URL: $url');
     }
@@ -861,63 +1142,84 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: 20.0,
-            vertical: 12.0,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Sección de copyright - más pequeña y adaptable
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
                 'Copyright © 2025 - MMKT GRUPO SURAY - CMO dante@suray.cl',
                 style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+                  color: Colors.black.withOpacity(0.7),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
                 ),
+                textAlign: TextAlign.center,
               ),
-              const SizedBox(width: 20),
-              // Área clickeable para Instagram
-              InkWell(
-                onTap: _openInstagram,
-                borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          
+          // Separador sutil
+          Container(
+            height: 1,
+            margin: const EdgeInsets.symmetric(horizontal: 40),
+            color: Colors.black.withOpacity(0.1),
+          ),
+          
+          // Sección de Instagram - píldora centrada abajo
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+            child: InkWell(
+              onTap: _openInstagram,
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.black.withOpacity(0.1),
+                    width: 1,
+                  ),
+                ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
-                      width: 32,
-                      height: 32,
+                      width: 28,
+                      height: 28,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(6),
                         child: Image.asset(
                           'assets/insta_icon.png',
-                          width: 32,
-                          height: 32,
+                          width: 28,
+                          height: 28,
                           fit: BoxFit.contain,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     const Text(
                       '@buses.suray.cargo',
                       style: TextStyle(
                         color: Colors.black,
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -927,29 +1229,38 @@ class _HomePageState extends State<HomePage> {
     if (weatherText == null) return CupertinoIcons.question_circle;
     final lowerCaseText = weatherText.toLowerCase();
 
-    if (lowerCaseText.contains('tormenta') || lowerCaseText.contains('truenos')) {
+    if (lowerCaseText.contains('tormenta') ||
+        lowerCaseText.contains('truenos')) {
       return CupertinoIcons.bolt_fill;
-    } else if (lowerCaseText.contains('lluvia fuerte') || lowerCaseText.contains('aguacero')) {
+    } else if (lowerCaseText.contains('lluvia fuerte') ||
+        lowerCaseText.contains('aguacero')) {
       return CupertinoIcons.cloud_heavyrain_fill;
-    } else if (lowerCaseText.contains('aguanieve') || (lowerCaseText.contains('lluvia') && lowerCaseText.contains('nieve'))) {
+    } else if (lowerCaseText.contains('aguanieve') ||
+        (lowerCaseText.contains('lluvia') && lowerCaseText.contains('nieve'))) {
       return CupertinoIcons.cloud_sleet_fill;
     } else if (lowerCaseText.contains('nieve')) {
       return CupertinoIcons.snow;
-    } else if (lowerCaseText.contains('lluvia') || lowerCaseText.contains('chubasco')) {
+    } else if (lowerCaseText.contains('lluvia') ||
+        lowerCaseText.contains('chubasco')) {
       return CupertinoIcons.cloud_rain_fill;
-    } else if (lowerCaseText.contains('llovizna') || lowerCaseText.contains('garúa')) {
+    } else if (lowerCaseText.contains('llovizna') ||
+        lowerCaseText.contains('garúa')) {
       return CupertinoIcons.cloud_drizzle_fill;
-    } else if (lowerCaseText.contains('niebla') || lowerCaseText.contains('bruma')) {
+    } else if (lowerCaseText.contains('niebla') ||
+        lowerCaseText.contains('bruma')) {
       return CupertinoIcons.cloud_fog_fill;
     } else if (lowerCaseText.contains('granizo')) {
       return CupertinoIcons.cloud_hail_fill;
     } else if (lowerCaseText.contains('viento')) {
       return CupertinoIcons.wind;
-    } else if (lowerCaseText.contains('algo nublado') || lowerCaseText.contains('parcialmente nublado')) {
+    } else if (lowerCaseText.contains('algo nublado') ||
+        lowerCaseText.contains('parcialmente nublado')) {
       return CupertinoIcons.cloud_sun_fill;
-    } else if (lowerCaseText.contains('nublado') || lowerCaseText.contains('nubes')) {
+    } else if (lowerCaseText.contains('nublado') ||
+        lowerCaseText.contains('nubes')) {
       return CupertinoIcons.cloud_fill;
-    } else if (lowerCaseText.contains('despejado') || lowerCaseText.contains('claro')) {
+    } else if (lowerCaseText.contains('despejado') ||
+        lowerCaseText.contains('claro')) {
       return CupertinoIcons.sun_max_fill;
     }
     return CupertinoIcons.cloud;

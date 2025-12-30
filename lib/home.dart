@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'contact_page.dart';
 import 'schedules_page.dart';
-import 'paraderos_page.dart';
 import 'main.dart';
 import 'dual_weather_service.dart';
 
@@ -45,13 +44,6 @@ class _HomePageState extends State<HomePage> {
   Timer? _imageRotationTimer;
   int _currentPage = 0;
 
-  // Variables para modo debug
-  bool _debugModeEnabled = false;
-  final TextEditingController _debugController = TextEditingController();
-  int _logoTapCount = 0;
-  Timer? _logoTapTimer;
-  bool _logoLongPressed = false;
-
   @override
   void initState() {
     super.initState();
@@ -79,23 +71,6 @@ class _HomePageState extends State<HomePage> {
         });
       }
     });
-
-    // Listener para detectar "debug"
-    _debugController.addListener(() {
-      if (_debugController.text.toLowerCase() == 'debug') {
-        setState(() {
-          _debugModeEnabled = true;
-        });
-        _debugController.clear();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Modo debug activado'),
-            duration: Duration(seconds: 2),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    });
   }
 
   @override
@@ -103,9 +78,7 @@ class _HomePageState extends State<HomePage> {
     _timeContextTimer?.cancel();
     _imageRotationTimer?.cancel();
     _weatherUpdateTimer?.cancel();
-    _logoTapTimer?.cancel();
     _pageController.dispose();
-    _debugController.dispose();
     for (var sub in _streamSubscriptions) {
       sub.cancel();
     }
@@ -164,6 +137,8 @@ class _HomePageState extends State<HomePage> {
   Future<void> _loadHolidays() async {
     try {
       final currentYear = DateTime.now().year;
+      print('📥 Cargando feriados del año $currentYear...');
+
       final snapshot =
           await _firestore
               .collection('feriados')
@@ -176,10 +151,26 @@ class _HomePageState extends State<HomePage> {
             (key, value) => MapEntry(key, Map<String, dynamic>.from(value)),
           ),
         );
+
+        // Asegurar que todos los feriados tengan tipoHorario
+        _holidays.forEach((key, value) {
+          if (!value.containsKey('tipoHorario')) {
+            value['tipoHorario'] = 'domingo'; // Valor por defecto
+          }
+        });
+
+        print('✅ Feriados cargados: ${_holidays.length}');
+        _holidays.forEach((key, value) {
+          print(
+            '   - $key: ${value['nombre']} (tipo: ${value['tipoHorario']}, activo: ${value['activo']})',
+          );
+        });
+      } else {
+        print('⚠️ No se encontraron feriados para el año $currentYear');
       }
       _checkIfTodayIsHoliday();
     } catch (e) {
-      print("Error cargando feriados: $e");
+      print("❌ Error cargando feriados: $e");
     }
   }
 
@@ -194,6 +185,12 @@ class _HomePageState extends State<HomePage> {
     String todayCollection = _getDayCollection(now);
     String tomorrowCollection = _getDayCollection(tomorrow);
     _currentDayCollection = todayCollection;
+
+    print('═══════════════════════════════════════════════');
+    print('🔄 Configurando listeners de horarios');
+    print('   HOY: $todayCollection');
+    print('   MAÑANA: $tomorrowCollection');
+    print('═══════════════════════════════════════════════');
 
     _listenToSchedule(
       'aysen',
@@ -222,6 +219,62 @@ class _HomePageState extends State<HomePage> {
     String dayCollection,
     void Function(List<String>) onData,
   ) {
+    print('🔍 _listenToSchedule: region=$region, dayCollection=$dayCollection');
+
+    // Caso especial: Sin servicio
+    if (dayCollection == 'sinServicio') {
+      print('⚠️ Día sin servicio detectado para $region');
+      onData([]);
+      return;
+    }
+
+    // Caso especial: Horarios especiales de feriado
+    if (dayCollection.startsWith('feriadoEspecial_')) {
+      final parts = dayCollection.split('_');
+      final year = parts[1];
+      final feriadoKey = parts[2]; // Formato: MM-DD
+
+      print('⭐ HORARIO ESPECIAL detectado:');
+      print('   - Región: $region');
+      print('   - Año: $year');
+      print('   - Feriado: $feriadoKey');
+      print('   - Ruta: horarios_especiales_feriados/$year/$region');
+
+      var subscription = _firestore
+          .collection('horarios_especiales_feriados')
+          .doc(year)
+          .collection(region)
+          .where('feriado', isEqualTo: feriadoKey)
+          .orderBy('time')
+          .snapshots()
+          .listen(
+            (snapshot) {
+              print(
+                '📦 Snapshot recibido para $region: ${snapshot.docs.length} documentos',
+              );
+              final times =
+                  snapshot.docs.map((doc) {
+                    print(
+                      '   - Doc ID: ${doc.id}, time: ${doc.data()['time']}',
+                    );
+                    return doc.data()['time'] as String;
+                  }).toList();
+              print('✅ Horarios especiales para $region: $times');
+              onData(times);
+              _recalculateAndSetDepartures();
+            },
+            onError: (error) {
+              print(
+                '❌ Error al obtener horarios especiales para $region: $error',
+              );
+            },
+          );
+      _streamSubscriptions.add(subscription);
+      return;
+    }
+
+    // Caso normal: Horarios regulares
+    print('📅 Usando horarios regulares para $region: $dayCollection');
     var subscription = _firestore
         .collection('horarios')
         .doc(region)
@@ -276,6 +329,18 @@ class _HomePageState extends State<HomePage> {
     List<String> tomorrowTimes,
   ) {
     final referenceTime = DateTime.now();
+
+    // Verificar si hoy es día sin servicio
+    if (todayTimes.isEmpty) {
+      final now = DateTime.now();
+      final todayKey =
+          "${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      if (_holidays.containsKey(todayKey) &&
+          _holidays[todayKey]!['tipoHorario'] == 'sinServicio') {
+        return "Sin recorridos";
+      }
+    }
+
     DateTime? parseTime(String time, DateTime ref) {
       try {
         final p = time.split(':');
@@ -328,15 +393,43 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  bool _isDateHoliday(DateTime date) {
+  String _getDayCollection(DateTime date) {
     final dateKey =
         "${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-    return _holidays.containsKey(dateKey) &&
-        _holidays[dateKey]!['activo'] == true;
-  }
 
-  String _getDayCollection(DateTime date) {
-    if (_isDateHoliday(date)) return 'domingosFeriados';
+    print(
+      '📅 _getDayCollection para ${date.day}/${date.month}/${date.year} (key: $dateKey)',
+    );
+
+    // Verificar si es feriado y obtener su tipo
+    if (_holidays.containsKey(dateKey) &&
+        _holidays[dateKey]!['activo'] == true) {
+      final tipoHorario = _holidays[dateKey]!['tipoHorario'] ?? 'domingo';
+      final nombre = _holidays[dateKey]!['nombre'];
+
+      print('🎉 Feriado detectado: $nombre');
+      print('   - Tipo: $tipoHorario');
+
+      switch (tipoHorario) {
+        case 'especial':
+          // Retornar identificador especial para consultar horarios personalizados
+          final resultado = 'feriadoEspecial_${date.year}_$dateKey';
+          print('   ⭐ Retornando: $resultado');
+          return resultado;
+        case 'sinServicio':
+          // Retornar identificador para día sin servicio
+          print('   ⚠️ Retornando: sinServicio');
+          return 'sinServicio';
+        case 'domingo':
+        default:
+          // Usar horarios normales de domingo
+          print('   📆 Retornando: domingosFeriados');
+          return 'domingosFeriados';
+      }
+    }
+
+    // Lógica normal para días no feriados
+    print('   📆 No es feriado, día normal de la semana');
     if (date.weekday >= 1 && date.weekday <= 5) return 'lunesViernes';
     if (date.weekday == 6) return 'sabados';
     return 'domingosFeriados';
@@ -370,49 +463,6 @@ class _HomePageState extends State<HomePage> {
         12: 'DIC',
       }[month] ??
       '';
-
-  // Método para manejar los taps en el botón Paraderos
-  void _handleParaderosTap() {
-    if (_debugModeEnabled) {
-      // Si el modo debug está activado, navegar directamente
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const ParaderosPage()),
-      );
-    } else if (_logoLongPressed) {
-      // Si el logo fue presionado por 5 segundos, contar taps
-      _logoTapTimer?.cancel();
-      _logoTapCount++;
-
-      if (_logoTapCount >= 5) {
-        // Activar modo debug después de 5 taps
-        setState(() {
-          _debugModeEnabled = true;
-          _logoTapCount = 0;
-          _logoLongPressed = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Modo debug activado - Ruta desbloqueado'),
-            duration: Duration(seconds: 2),
-            backgroundColor: Colors.green,
-          ),
-        );
-        // Navegar a paraderos
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ParaderosPage()),
-        );
-      } else {
-        // Resetear contador después de 2 segundos de inactividad
-        _logoTapTimer = Timer(const Duration(seconds: 2), () {
-          setState(() {
-            _logoTapCount = 0;
-          });
-        });
-      }
-    }
-  }
 
   // --- WIDGETS DE LA PÁGINA DE INICIO ---
 
@@ -460,20 +510,6 @@ class _HomePageState extends State<HomePage> {
                         children: [
                           // Header adaptable según orientación
                           _buildHeader(orientation),
-
-                          // TextField oculto para activar debug
-                          if (!_debugModeEnabled)
-                            Opacity(
-                              opacity: 0.0,
-                              child: SizedBox(
-                                height: 0,
-                                width: 0,
-                                child: TextField(
-                                  controller: _debugController,
-                                  autofocus: false,
-                                ),
-                              ),
-                            ),
 
                           // Contenido principal
                           Padding(
@@ -538,7 +574,7 @@ class _HomePageState extends State<HomePage> {
                                           height: 28,
                                           fit: BoxFit.contain,
                                         ),
-                                        const SizedBox(width: 2),
+                                        const SizedBox(width: 14),
                                         const Text(
                                           'TODOS LOS HORARIOS',
                                           style: TextStyle(
@@ -583,24 +619,10 @@ class _HomePageState extends State<HomePage> {
           children: [
             // Logo centrado
             Center(
-              child: GestureDetector(
-                onLongPressStart: (_) {
-                  setState(() {
-                    _logoLongPressed = true;
-                  });
-                },
-                onLongPressEnd: (_) {
-                  Future.delayed(const Duration(seconds: 5), () {
-                    setState(() {
-                      _logoLongPressed = false;
-                    });
-                  });
-                },
-                child: Image.asset(
-                  'assets/logo.png',
-                  height: 80,
-                  fit: BoxFit.contain,
-                ),
+              child: Image.asset(
+                'assets/logo.png',
+                height: 80,
+                fit: BoxFit.contain,
               ),
             ),
             const SizedBox(height: 16),
@@ -616,7 +638,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                _buildHeroNavButton('Ruta', _handleParaderosTap),
+                _buildHeroNavButton('Ruta', () {}),
               ],
             ),
           ],
@@ -629,25 +651,7 @@ class _HomePageState extends State<HomePage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            GestureDetector(
-              onLongPressStart: (_) {
-                setState(() {
-                  _logoLongPressed = true;
-                });
-              },
-              onLongPressEnd: (_) {
-                Future.delayed(const Duration(seconds: 5), () {
-                  setState(() {
-                    _logoLongPressed = false;
-                  });
-                });
-              },
-              child: Image.asset(
-                'assets/logo.png',
-                height: 80,
-                fit: BoxFit.contain,
-              ),
-            ),
+            Image.asset('assets/logo.png', height: 80, fit: BoxFit.contain),
             Row(
               children: [
                 _buildHeroNavButton(
@@ -658,7 +662,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                _buildHeroNavButton('Ruta', _handleParaderosTap),
+                _buildHeroNavButton('Ruta', () {}),
               ],
             ),
           ],
@@ -925,7 +929,8 @@ class _HomePageState extends State<HomePage> {
         mainAxisSize: MainAxisSize.max,
         children: [
           SizedBox(
-            height: 36, // Altura fija para mantener simetría entre ambos títulos
+            height:
+                36, // Altura fija para mantener simetría entre ambos títulos
             child: Center(
               child: Text(
                 city,
@@ -1147,7 +1152,10 @@ class _HomePageState extends State<HomePage> {
         children: [
           // Sección de copyright - más pequeña y adaptable
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 6.0,
+            ),
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
@@ -1161,22 +1169,28 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
-          
+
           // Separador sutil
           Container(
             height: 1,
             margin: const EdgeInsets.symmetric(horizontal: 40),
             color: Colors.black.withOpacity(0.1),
           ),
-          
+
           // Sección de Instagram - píldora centrada abajo
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20.0,
+              vertical: 10.0,
+            ),
             child: InkWell(
               onTap: _openInstagram,
               borderRadius: BorderRadius.circular(20),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(20),

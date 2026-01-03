@@ -360,6 +360,8 @@ class _SchedulesPageState extends State<SchedulesPage> {
                       darkColor: MyApp.saturdayOrangeDark,
                       fontSize: baseFontSize,
                       chipPadding: chipPadding,
+                      subtitleBackgroundColor: const Color(0xFFFFF9C4), // Amarillo pastel claro
+                      subtitleTextColor: const Color(0xFFF57F17), // Amarillo oscuro para contraste
                     ),
                     const SizedBox(height: 24),
 
@@ -373,6 +375,8 @@ class _SchedulesPageState extends State<SchedulesPage> {
                       darkColor: MyApp.sundayRedDark,
                       fontSize: baseFontSize,
                       chipPadding: chipPadding,
+                      subtitleBackgroundColor: const Color(0xFFFFCDD2), // Rojo pastel claro
+                      subtitleTextColor: const Color(0xFFC62828), // Rojo oscuro para contraste
                     ),
 
                     // Texto informativo (solo visible durante captura)
@@ -460,6 +464,8 @@ class _SchedulesPageState extends State<SchedulesPage> {
     required Color darkColor,
     double fontSize = 14.0,
     double chipPadding = 16.0,
+    Color? subtitleBackgroundColor,
+    Color? subtitleTextColor,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -519,15 +525,15 @@ class _SchedulesPageState extends State<SchedulesPage> {
           // Subtítulo "Salidas desde:"
           Container(
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 24),
-            decoration: const BoxDecoration(
-              color: Color(0xFFB2EBF2), // Cyan pastel
+            decoration: BoxDecoration(
+              color: subtitleBackgroundColor ?? const Color(0xFFB2EBF2), // Cyan pastel por defecto
             ),
-            child: const Text(
+            child: Text(
               'Salidas desde:',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF00695C), // Verde azulado oscuro para contraste
+                color: subtitleTextColor ?? const Color(0xFF00695C), // Verde azulado oscuro para contraste
               ),
               textAlign: TextAlign.center,
             ),
@@ -584,6 +590,8 @@ class _SchedulesPageState extends State<SchedulesPage> {
     required Color darkColor,
     double fontSize = 14.0,
     double chipPadding = 16.0,
+    Color? subtitleBackgroundColor,
+    Color? subtitleTextColor,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -643,15 +651,15 @@ class _SchedulesPageState extends State<SchedulesPage> {
           // Subtítulo "Salidas desde:"
           Container(
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 24),
-            decoration: const BoxDecoration(
-              color: Color(0xFFB2EBF2), // Cyan pastel
+            decoration: BoxDecoration(
+              color: subtitleBackgroundColor ?? const Color(0xFFB2EBF2), // Cyan pastel por defecto
             ),
-            child: const Text(
+            child: Text(
               'Salidas desde:',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF00695C), // Verde azulado oscuro para contraste
+                color: subtitleTextColor ?? const Color(0xFF00695C), // Verde azulado oscuro para contraste
               ),
               textAlign: TextAlign.center,
             ),

@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'contact_page.dart';
 import 'schedules_page.dart';
+import 'paraderos_page.dart';
 import 'main.dart';
 import 'dual_weather_service.dart';
 
@@ -337,7 +338,7 @@ class _HomePageState extends State<HomePage> {
           "${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
       if (_holidays.containsKey(todayKey) &&
           _holidays[todayKey]!['tipoHorario'] == 'sinServicio') {
-        return "Sin recorridos";
+        return "Sin recorrido";
       }
     }
 
@@ -470,6 +471,8 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       // Sin AppBar
+      // Footer fijo en la parte inferior
+      bottomNavigationBar: _buildFooter(),
       body: SelectionArea(
         child: Stack(
           fit: StackFit.expand,
@@ -592,9 +595,6 @@ class _HomePageState extends State<HomePage> {
                             ],
                           ),
                         ),
-
-                        // Footer integrado al scroll
-                        _buildFooter(),
                       ],
                     );
                   },
@@ -635,7 +635,13 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                _buildHeroNavButton('Ruta', () {}),
+                _buildHeroNavButton(
+                  'Ruta',
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ParaderosPage()),
+                  ),
+                ),
               ],
             ),
           ],
@@ -659,7 +665,13 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                _buildHeroNavButton('Ruta', () {}),
+                _buildHeroNavButton(
+                  'Ruta',
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ParaderosPage()),
+                  ),
+                ),
               ],
             ),
           ],
@@ -1147,50 +1159,25 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Sección de copyright - más pequeña y adaptable
+          // Sección de Instagram - píldora centrada arriba
           Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 6.0,
-            ),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                'Copyright © 2025 - MMKT GRUPO SURAY - CMO dante@suray.cl',
-                style: TextStyle(
-                  color: Colors.black.withOpacity(0.7),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w400,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-
-          // Separador sutil
-          Container(
-            height: 1,
-            margin: const EdgeInsets.symmetric(horizontal: 40),
-            color: Colors.black.withOpacity(0.1),
-          ),
-
-          // Sección de Instagram - píldora centrada abajo
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20.0,
-              vertical: 10.0,
+            padding: const EdgeInsets.only(
+              left: 20.0,
+              right: 20.0,
+              top: 12.0,
+              bottom: 8.0,
             ),
             child: InkWell(
               onTap: _openInstagram,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+                  horizontal: 10,
+                  vertical: 6,
                 ),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: Colors.black.withOpacity(0.1),
                     width: 1,
@@ -1201,32 +1188,52 @@ class _HomePageState extends State<HomePage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
-                      width: 28,
-                      height: 28,
+                      width: 22,
+                      height: 22,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(6),
+                        shape: BoxShape.circle,
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
+                      child: ClipOval(
                         child: Image.asset(
                           'assets/insta_icon.png',
-                          width: 28,
-                          height: 28,
-                          fit: BoxFit.contain,
+                          width: 22,
+                          height: 22,
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     const Text(
                       '@buses.suray.cargo',
                       style: TextStyle(
                         color: Colors.black,
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
                 ),
+              ),
+            ),
+          ),
+
+          // Sección de copyright - al final
+          Padding(
+            padding: const EdgeInsets.only(
+              left: 16.0,
+              right: 16.0,
+              bottom: 8.0,
+            ),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                'Copyright © 2025 - MMKT GRUPO SURAY - CMO dante@suray.cl',
+                style: TextStyle(
+                  color: Colors.black.withOpacity(0.6),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w400,
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
           ),

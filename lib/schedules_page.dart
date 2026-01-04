@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:universal_html/html.dart' as html;
 import 'main.dart';
+import 'floating_notification.dart';
 
 class SchedulesPage extends StatefulWidget {
   final FirebaseFirestore firestore;
@@ -59,11 +60,11 @@ class _SchedulesPageState extends State<SchedulesPage> {
 
       // Mostrar indicador de carga
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('📸 Capturando imagen completa...'),
-          duration: Duration(seconds: 2),
-        ),
+      FloatingNotification.show(
+        context,
+        message: 'Capturando imagen completa...',
+        type: NotificationType.info,
+        duration: const Duration(seconds: 2),
       );
 
       // Esperar un poco más para asegurar que el snackbar se muestre
@@ -98,21 +99,19 @@ class _SchedulesPageState extends State<SchedulesPage> {
       }
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('✅ Imagen guardada: $fileName'),
-          duration: const Duration(seconds: 3),
-          backgroundColor: MyApp.weekdayMint,
-        ),
+      FloatingNotification.show(
+        context,
+        message: 'Imagen guardada exitosamente: $fileName',
+        type: NotificationType.success,
+        duration: const Duration(seconds: 3),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Error al capturar imagen: $e'),
-          duration: const Duration(seconds: 3),
-          backgroundColor: MyApp.errorColor,
-        ),
+      FloatingNotification.show(
+        context,
+        message: 'Error al capturar imagen. Inténtalo nuevamente',
+        type: NotificationType.error,
+        duration: const Duration(seconds: 3),
       );
     } finally {
       // Reactivar destacados y restaurar zoom después de capturar
@@ -379,11 +378,11 @@ class _SchedulesPageState extends State<SchedulesPage> {
                       subtitleTextColor: const Color(0xFFC62828), // Rojo oscuro para contraste
                     ),
 
-                    // Texto informativo (solo visible durante captura)
+                    // Logo y fecha (solo visible durante captura)
                     if (_isCapturingScreenshot) ...[
                       const SizedBox(height: 32),
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
                           color: MyApp.surfaceWhite,
                           borderRadius: BorderRadius.circular(12),
@@ -394,6 +393,14 @@ class _SchedulesPageState extends State<SchedulesPage> {
                         ),
                         child: Column(
                           children: [
+                            // Logo centrado
+                            Image.asset(
+                              'assets/logo.png',
+                              height: 80,
+                              fit: BoxFit.contain,
+                            ),
+                            const SizedBox(height: 16),
+                            // Fecha y hora
                             Text(
                               'Fecha: ${DateTime.now().day.toString().padLeft(2, '0')}/${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().year}',
                               style: TextStyle(
@@ -403,13 +410,13 @@ class _SchedulesPageState extends State<SchedulesPage> {
                               ),
                               textAlign: TextAlign.center,
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 4),
                             Text(
-                              '*Consultar los horarios en oficina',
+                              'Hora: ${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}',
                               style: TextStyle(
                                 fontSize: 14,
-                                fontStyle: FontStyle.italic,
-                                color: MyApp.lightTextColor,
+                                fontWeight: FontWeight.w600,
+                                color: MyApp.darkTextColor,
                               ),
                               textAlign: TextAlign.center,
                             ),

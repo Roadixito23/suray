@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'main.dart';
+import 'floating_notification.dart';
 
 class ContactPage extends StatefulWidget {
   const ContactPage({super.key});
@@ -56,12 +57,11 @@ class _ContactPageState extends State<ContactPage>
 
     // Mostrar mensaje de confirmación
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Número $cleanNumber copiado'),
-          duration: const Duration(seconds: 2),
-          backgroundColor: MyApp.primaryOrange,
-        ),
+      FloatingNotification.show(
+        context,
+        message: 'Número $cleanNumber copiado al portapapeles',
+        type: NotificationType.success,
+        duration: const Duration(seconds: 2),
       );
     }
 
@@ -79,12 +79,11 @@ class _ContactPageState extends State<ContactPage>
 
     // Mostrar mensaje de confirmación
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Correo $email copiado'),
-          duration: const Duration(seconds: 2),
-          backgroundColor: MyApp.primaryOrange,
-        ),
+      FloatingNotification.show(
+        context,
+        message: 'Correo $email copiado al portapapeles',
+        type: NotificationType.success,
+        duration: const Duration(seconds: 2),
       );
     }
 
@@ -106,12 +105,11 @@ class _ContactPageState extends State<ContactPage>
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No se pudo abrir el mapa'),
-            duration: Duration(seconds: 2),
-            backgroundColor: Colors.red,
-          ),
+        FloatingNotification.show(
+          context,
+          message: 'No se pudo abrir el mapa. Inténtalo nuevamente',
+          type: NotificationType.error,
+          duration: const Duration(seconds: 3),
         );
       }
     }
@@ -490,7 +488,7 @@ class _ContactPageState extends State<ContactPage>
           locations: [
             LocationInfo(
               type: 'Oficina de venta de pasajes',
-              address: 'Terminal Municipal, Avenida Norte Sur 1280, Oficina N°2',
+              address: 'Av. Norte Sur y Las Violetas, Terminal Municipal Of. N°2',
               phone: '672 212639',
               icon: Icons.location_city_rounded,
               mapUrl: 'https://maps.app.goo.gl/9AJMknQmkmf3tHSo8',

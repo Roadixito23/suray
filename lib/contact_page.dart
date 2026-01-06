@@ -488,7 +488,7 @@ class _ContactPageState extends State<ContactPage>
           locations: [
             LocationInfo(
               type: 'Oficina de venta de pasajes',
-              address: 'Av. Norte Sur y Las Violetas, Terminal Municipal Of. N°2',
+              address: 'Av. Norte Sur/Las Violetas, Terminal Municipal Of. N°2',
               phone: '672 212639',
               icon: Icons.location_city_rounded,
               mapUrl: 'https://maps.app.goo.gl/9AJMknQmkmf3tHSo8',

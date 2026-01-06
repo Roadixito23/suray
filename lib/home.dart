@@ -471,8 +471,6 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       // Sin AppBar
-      // Footer fijo en la parte inferior
-      bottomNavigationBar: _buildFooter(),
       body: SelectionArea(
         child: Stack(
           fit: StackFit.expand,
@@ -595,6 +593,10 @@ class _HomePageState extends State<HomePage> {
                             ],
                           ),
                         ),
+
+                        // Footer scrolleable al final del contenido
+                        const SizedBox(height: 40),
+                        _buildFooter(),
                       ],
                     );
                   },

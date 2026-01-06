@@ -1,5 +1,9 @@
+import 'dart:async';
 import 'dart:math';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
@@ -14,7 +18,8 @@ class ParaderosPage extends StatefulWidget {
   State<ParaderosPage> createState() => _ParaderosPageState();
 }
 
-class _ParaderosPageState extends State<ParaderosPage> {
+class _ParaderosPageState extends State<ParaderosPage>
+    with TickerProviderStateMixin {
   // Coordenadas de los puntos
   final LatLng puertoAysen = const LatLng(-45.401077, -72.687320);
   final LatLng coyhaique = const LatLng(-45.582039, -72.078136);
@@ -23,21 +28,57 @@ class _ParaderosPageState extends State<ParaderosPage> {
   // Controller del mapa
   final MapController mapController = MapController();
 
-  // Puntos de la ruta real siguiendo la carretera (2104 puntos)
-  static final List<LatLng> _routePoints = RouteData.points;
+  // Puntos de las rutas siguiendo la carretera
+  static final List<LatLng> _routeAysToCoy =
+      RouteData.routeAysToCoy; // Aysén -> Coyhaique
+  static final List<LatLng> _routeCoyToAys =
+      RouteData.routeCoyToAys; // Coyhaique -> Aysén
+
+  // Dirección de la ruta actual (true = AYS->COY, false = COY->AYS)
+  bool _isAysToCoy = true;
 
   // Geolocalización
   Position? _currentPosition;
   bool _isLoadingLocation = false;
   String? _locationMessage;
 
-  // Rotación del mapa
-  double _mapRotation = 0.0;
+  // Rotación del mapa con ValueNotifier para forzar rebuilds
+  final ValueNotifier<double> _mapRotationNotifier = ValueNotifier<double>(0.0);
+
+  // Stream subscription para eventos del mapa en tiempo real
+  StreamSubscription<MapEvent>? _mapEventSubscription;
+
+  // Animación de triángulos viajando por la ruta
+  late AnimationController _routeAnimationController;
+  final List<double> _trianglePositions = [0.0, 0.5]; // 2 triángulos espaciados
 
   @override
   void initState() {
     super.initState();
     _getCurrentLocation();
+
+    // Inicializar animación de triángulos
+    _routeAnimationController =
+        AnimationController(
+            vsync: this,
+            duration: const Duration(
+              seconds: 23,
+            ), // 23 segundos para recorrer toda la ruta
+          )
+          ..addListener(() {
+            // Forzar rebuild para actualizar posiciones de triángulos
+            if (mounted) setState(() {});
+          })
+          ..repeat(); // Repetir indefinidamente
+
+    // Escuchar eventos del mapa en tiempo real para detectar rotación
+    _mapEventSubscription = mapController.mapEventStream.listen((event) {
+      // Actualizar rotación en tiempo real
+      final currentRotation = mapController.camera.rotation;
+      if (_mapRotationNotifier.value != currentRotation) {
+        _mapRotationNotifier.value = currentRotation;
+      }
+    });
   }
 
   Future<void> _getCurrentLocation() async {
@@ -54,18 +95,10 @@ class _ParaderosPageState extends State<ParaderosPage> {
           _locationMessage = 'GPS desactivado';
           _isLoadingLocation = false;
         });
-        if (mounted) {
-          FloatingNotification.show(
-            context,
-            message: 'Activa el GPS en tu dispositivo para ver tu ubicación en el mapa',
-            type: NotificationType.warning,
-            duration: const Duration(seconds: 4),
-          );
-        }
         return;
       }
 
-      // Verificar permisos
+      // Verificar y solicitar permisos (en web, esto activará el diálogo del navegador)
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -74,14 +107,6 @@ class _ParaderosPageState extends State<ParaderosPage> {
             _locationMessage = 'Permiso denegado';
             _isLoadingLocation = false;
           });
-          if (mounted) {
-            FloatingNotification.show(
-              context,
-              message: 'Necesitamos tu permiso para mostrar tu ubicación en el mapa',
-              type: NotificationType.warning,
-              duration: const Duration(seconds: 4),
-            );
-          }
           return;
         }
       }
@@ -91,14 +116,6 @@ class _ParaderosPageState extends State<ParaderosPage> {
           _locationMessage = 'Permiso bloqueado';
           _isLoadingLocation = false;
         });
-        if (mounted) {
-          FloatingNotification.show(
-            context,
-            message: 'Los permisos de ubicación están bloqueados. Actívalos en la configuración de tu navegador',
-            type: NotificationType.error,
-            duration: const Duration(seconds: 5),
-          );
-        }
         return;
       }
 
@@ -131,7 +148,8 @@ class _ParaderosPageState extends State<ParaderosPage> {
           if (mounted) {
             FloatingNotification.show(
               context,
-              message: 'Tu ubicación está fuera de la zona Puerto Aysén - Coyhaique',
+              message:
+                  'Tu ubicación está fuera de la zona Puerto Aysén - Coyhaique',
               type: NotificationType.info,
               duration: const Duration(seconds: 4),
             );
@@ -140,18 +158,11 @@ class _ParaderosPageState extends State<ParaderosPage> {
         _isLoadingLocation = false;
       });
     } catch (e) {
+      // Solo actualizar el estado, sin mostrar notificación molesta
       setState(() {
-        _locationMessage = 'Error de ubicación';
+        _locationMessage = null;
         _isLoadingLocation = false;
       });
-      if (mounted) {
-        FloatingNotification.show(
-          context,
-          message: 'No se pudo obtener tu ubicación. Verifica tu conexión y permisos',
-          type: NotificationType.error,
-          duration: const Duration(seconds: 4),
-        );
-      }
     }
   }
 
@@ -170,6 +181,9 @@ class _ParaderosPageState extends State<ParaderosPage> {
 
   @override
   void dispose() {
+    _routeAnimationController.dispose();
+    _mapEventSubscription?.cancel();
+    _mapRotationNotifier.dispose();
     mapController.dispose();
     super.dispose();
   }
@@ -179,174 +193,122 @@ class _ParaderosPageState extends State<ParaderosPage> {
     return Scaffold(
       body: Stack(
         children: [
-          // Mapa
-          FlutterMap(
-            mapController: mapController,
-            options: MapOptions(
-              initialCenter: centerPoint,
-              initialZoom: 9.5,
-              minZoom: 9.0,
-              maxZoom: 18.0, // Aumentado para ver las calles en detalle
-              // Límites del mapa para mantenerlo centrado en la región
-              cameraConstraint: CameraConstraint.contain(
-                bounds: LatLngBounds(
-                  const LatLng(-45.82, -73.0), // Suroeste
-                  const LatLng(-45.19, -71.8), // Noreste
+          // Mapa con soporte para rotación Ctrl+Scroll
+          Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerSignal: (event) {
+              if (event is PointerScrollEvent &&
+                  HardwareKeyboard.instance.isControlPressed) {
+                // Rotar el mapa con Ctrl+Scroll
+                final rotationDelta = event.scrollDelta.dy * 0.5;
+                final newRotation =
+                    (_mapRotationNotifier.value + rotationDelta) % 360;
+                _mapRotationNotifier.value = newRotation;
+                mapController.rotate(newRotation);
+              }
+            },
+            child: FlutterMap(
+              mapController: mapController,
+              options: MapOptions(
+                initialCenter: centerPoint,
+                initialZoom: 9.5,
+                minZoom: 9.0,
+                maxZoom: 18.0,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.all,
+                ),
+                cameraConstraint: CameraConstraint.contain(
+                  bounds: LatLngBounds(
+                    const LatLng(-45.82, -73.0),
+                    const LatLng(-45.19, -71.8),
+                  ),
                 ),
               ),
-            ),
-            children: [
-              TileLayer(
-                urlTemplate:
-                    'https://api.maptiler.com/maps/streets-v4/{z}/{x}/{y}.png?key=JlwBUJ8jYaM19HSPdZrv',
-                userAgentPackageName: 'com.suray.app',
-              ),
-              // Ruta que sigue las carreteras
-              PolylineLayer(
-                polylines: [
-                  Polyline(
-                    points: _routePoints,
-                    strokeWidth: 4.0,
-                    color: MyApp.primaryOrange,
-                    borderStrokeWidth: 2.0,
-                    borderColor: MyApp.primaryNavy,
-                  ),
-                ],
-              ),
-              // Marcadores
-              MarkerLayer(
-                markers: [
-                  // Ubicación del usuario (solo si está dentro del mapa)
-                  if (_currentPosition != null)
+              children: [
+                TileLayer(
+                  urlTemplate:
+                      'https://api.maptiler.com/maps/streets-v4/{z}/{x}/{y}.png?key=JlwBUJ8jYaM19HSPdZrv',
+                  userAgentPackageName: 'com.suray.app',
+                ),
+                // Ruta que sigue las carreteras
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: _isAysToCoy ? _routeAysToCoy : _routeCoyToAys,
+                      strokeWidth: 4.0,
+                      color:
+                          _isAysToCoy ? MyApp.primaryOrange : MyApp.accentBlue,
+                      borderStrokeWidth: 2.0,
+                      borderColor: MyApp.primaryNavy,
+                    ),
+                  ],
+                ),
+                // Marcadores
+                MarkerLayer(
+                  markers: [
+                    // Ubicación del usuario
+                    if (_currentPosition != null)
+                      Marker(
+                        point: LatLng(
+                          _currentPosition!.latitude,
+                          _currentPosition!.longitude,
+                        ),
+                        width: 40,
+                        height: 40,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.3),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.blue, width: 3),
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.circle,
+                              color: Colors.blue,
+                              size: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    // Triángulos animados en la ruta
+                    ..._buildAnimatedTriangles(),
+                    // Puerto Aysén
                     Marker(
-                      point: LatLng(
-                        _currentPosition!.latitude,
-                        _currentPosition!.longitude,
-                      ),
-                      width: 40,
-                      height: 40,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.3),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.blue, width: 3),
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.circle,
-                            color: Colors.blue,
-                            size: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                  // Puerto Aysén
-                  Marker(
-                    point: puertoAysen,
-                    width: 80,
-                    height: 80,
-                    child: Transform.rotate(
-                      angle: -_mapRotation * pi / 180,
-                      child: Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: MyApp.primaryNavy,
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.3),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: const Text(
-                              'Puerto Aysén',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Icon(
-                            Icons.location_on,
+                      point: puertoAysen,
+                      width: 80,
+                      height: 80,
+                      child: ValueListenableBuilder<double>(
+                        valueListenable: _mapRotationNotifier,
+                        builder: (context, rotation, _) {
+                          return _buildRotatingMarker(
+                            label: 'Puerto Aysén',
                             color: MyApp.primaryNavy,
-                            size: 40,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                        ],
+                            rotation: rotation,
+                          );
+                        },
                       ),
                     ),
-                  ),
-                  // Coyhaique
-                  Marker(
-                    point: coyhaique,
-                    width: 80,
-                    height: 80,
-                    child: Transform.rotate(
-                      angle: -_mapRotation * pi / 180,
-                      child: Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: MyApp.accentBlue,
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.3),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: const Text(
-                              'Coyhaique',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Icon(
-                            Icons.location_on,
+                    // Coyhaique
+                    Marker(
+                      point: coyhaique,
+                      width: 80,
+                      height: 80,
+                      child: ValueListenableBuilder<double>(
+                        valueListenable: _mapRotationNotifier,
+                        builder: (context, rotation, _) {
+                          return _buildRotatingMarker(
+                            label: 'Coyhaique',
                             color: MyApp.accentBlue,
-                            size: 40,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                        ],
+                            rotation: rotation,
+                          );
+                        },
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
-
           // Header flotante mejorado
           Positioned(
             top: 0,
@@ -358,9 +320,9 @@ class _ParaderosPageState extends State<ParaderosPage> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    MyApp.primaryNavy,
                     MyApp.primaryNavy.withOpacity(0.95),
-                    MyApp.primaryNavy.withOpacity(0.7),
+                    MyApp.primaryNavy.withOpacity(0.85),
+                    MyApp.primaryNavy.withOpacity(0.5),
                     Colors.transparent,
                   ],
                   stops: const [0.0, 0.5, 0.8, 1.0],
@@ -372,123 +334,114 @@ class _ParaderosPageState extends State<ParaderosPage> {
                 right: 16,
                 bottom: 20,
               ),
-              child: Column(
+              child: Row(
                 children: [
+                  // Botón de volver
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Título expandido
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            MyApp.primaryOrange.withOpacity(0.9),
+                            MyApp.primaryOrange.withOpacity(0.7),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.8),
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: MyApp.primaryOrange.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Text(
+                        'Ruta Buses Suray',
+                        style: TextStyle(
+                          fontFamily: 'Hemiheads',
+                          fontSize: 20,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Botones de zoom y navegación
                   Row(
                     children: [
-                      // Botón de volver
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.3),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: IconButton(
-                          icon: const Icon(
-                            Icons.arrow_back_ios_new,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                          onPressed: () => Navigator.pop(context),
-                        ),
+                      // Botones de zoom
+                      _buildZoomButton(
+                        icon: Icons.remove,
+                        onTap: () {
+                          final currentZoom = mapController.camera.zoom;
+                          mapController.move(
+                            mapController.camera.center,
+                            (currentZoom - 1).clamp(9.0, 18.0),
+                          );
+                        },
                       ),
-                      const SizedBox(width: 12),
-                      // Título
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Ruta',
-                              style: TextStyle(
-                                fontFamily: 'Hemiheads',
-                                fontSize: 26,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                height: 1.0,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.route,
-                                  color: MyApp.primaryOrange,
-                                  size: 14,
-                                ),
-                                const SizedBox(width: 6),
-                                const Flexible(
-                                  child: Text(
-                                    'Puerto Aysén - Coyhaique',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                      const SizedBox(width: 4),
+                      _buildZoomButton(
+                        icon: Icons.add,
+                        onTap: () {
+                          final currentZoom = mapController.camera.zoom;
+                          mapController.move(
+                            mapController.camera.center,
+                            (currentZoom + 1).clamp(9.0, 18.0),
+                          );
+                        },
                       ),
-                      // Controles de zoom compactos
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.3),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            InkWell(
-                              onTap: () {
-                                final currentZoom = mapController.camera.zoom;
-                                mapController.move(
-                                  mapController.camera.center,
-                                  currentZoom + 1,
-                                );
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.all(8),
-                                child: Icon(
-                                  Icons.add,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                              ),
-                            ),
-                            Container(
-                              height: 1,
-                              color: Colors.white.withOpacity(0.2),
-                            ),
-                            InkWell(
-                              onTap: () {
-                                final currentZoom = mapController.camera.zoom;
-                                mapController.move(
-                                  mapController.camera.center,
-                                  currentZoom - 1,
-                                );
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.all(8),
-                                child: Icon(
-                                  Icons.remove,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                      const SizedBox(width: 8),
+                      // Botón AYS (Puerto Aysén)
+                      _buildQuickNavButton(
+                        label: 'AYS',
+                        color: MyApp.primaryNavy,
+                        onTap: () {
+                          mapController.move(puertoAysen, 13.0);
+                        },
+                      ),
+                      const SizedBox(width: 4),
+                      // Botón de flecha para cambiar dirección de ruta
+                      _buildDirectionButton(),
+                      const SizedBox(width: 4),
+                      // Botón COY (Coyhaique)
+                      _buildQuickNavButton(
+                        label: 'COY',
+                        color: MyApp.accentBlue,
+                        onTap: () {
+                          mapController.move(coyhaique, 13.0);
+                        },
                       ),
                     ],
                   ),
@@ -497,19 +450,30 @@ class _ParaderosPageState extends State<ParaderosPage> {
             ),
           ),
 
-          // Panel de navegación reorganizado (derecha)
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 100,
-            right: 16,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // Botón Mi Ubicación (si está disponible)
-                if (_currentPosition != null)
-                  _buildNavigationButton(
-                    icon: Icons.my_location_rounded,
-                    label: 'Mi Ubicación',
-                    color: const Color(0xFF2196F3),
+          // Botón Mi Ubicación (si está disponible) - ahora en la esquina superior derecha
+          if (_currentPosition != null)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 80,
+              right: 16,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF64B5F6).withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.8),
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF2196F3).withOpacity(0.4),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
                     onTap: () {
                       mapController.move(
                         LatLng(
@@ -519,30 +483,19 @@ class _ParaderosPageState extends State<ParaderosPage> {
                         14.0,
                       );
                     },
+                    borderRadius: BorderRadius.circular(12),
+                    child: const Padding(
+                      padding: EdgeInsets.all(10),
+                      child: Icon(
+                        Icons.my_location_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
                   ),
-                const SizedBox(height: 12),
-                // Botón Puerto Aysén
-                _buildNavigationButton(
-                  icon: Icons.location_city,
-                  label: 'Puerto Aysén',
-                  color: MyApp.primaryNavy,
-                  onTap: () {
-                    mapController.move(puertoAysen, 13.0);
-                  },
                 ),
-                const SizedBox(height: 12),
-                // Botón Coyhaique
-                _buildNavigationButton(
-                  icon: Icons.apartment_rounded,
-                  label: 'Coyhaique',
-                  color: MyApp.accentBlue,
-                  onTap: () {
-                    mapController.move(coyhaique, 13.0);
-                  },
-                ),
-              ],
+              ),
             ),
-          ),
 
           // Mensaje de ubicación fuera del área
           if (_locationMessage != null)
@@ -581,55 +534,41 @@ class _ParaderosPageState extends State<ParaderosPage> {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    // Botón X para cerrar
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _locationMessage = null;
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
 
-          // Rosa de los vientos mejorada con instrucciones
+          // Brújula estilo Google Maps - con ValueListenableBuilder para rebuild
           Positioned(
-            bottom: 20,
-            left: 16,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Instrucción
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: MyApp.primaryNavy.withOpacity(0.9),
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.touch_app,
-                        color: MyApp.primaryOrange,
-                        size: 14,
-                      ),
-                      const SizedBox(width: 6),
-                      const Text(
-                        'Arrastra para rotar',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                _buildCompassRose(),
-              ],
+            top: 140,
+            right: 16,
+            child: ValueListenableBuilder<double>(
+              valueListenable: _mapRotationNotifier,
+              builder: (context, rotation, _) {
+                return _buildCompassRose(rotation);
+              },
             ),
           ),
         ],
@@ -637,21 +576,23 @@ class _ParaderosPageState extends State<ParaderosPage> {
     );
   }
 
-  Widget _buildNavigationButton({
-    required IconData icon,
+  Widget _buildQuickNavButton({
     required String label,
     required Color color,
     required VoidCallback onTap,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          colors: [color.withOpacity(0.95), color.withOpacity(0.85)],
+        ),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withOpacity(0.8), width: 2),
         boxShadow: [
           BoxShadow(
             color: color.withOpacity(0.4),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -659,23 +600,17 @@ class _ParaderosPageState extends State<ParaderosPage> {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
             ),
           ),
         ),
@@ -683,295 +618,320 @@ class _ParaderosPageState extends State<ParaderosPage> {
     );
   }
 
-  Widget _buildCompassRose() {
+  // Construir triángulos animados que viajan por la ruta
+  List<Marker> _buildAnimatedTriangles() {
+    final route = _isAysToCoy ? _routeAysToCoy : _routeCoyToAys;
+    if (route.isEmpty) return [];
+
+    return _trianglePositions.map((offset) {
+      // Calcular posición en la ruta basada en la animación
+      final progress = (_routeAnimationController.value + offset) % 1.0;
+      final index = (progress * (route.length - 1)).floor();
+      final nextIndex = (index + 1).clamp(0, route.length - 1);
+
+      final currentPoint = route[index];
+      final nextPoint = route[nextIndex];
+
+      // Interpolar entre puntos para movimiento suave
+      final t = (progress * (route.length - 1)) - index;
+      final lat =
+          currentPoint.latitude +
+          (nextPoint.latitude - currentPoint.latitude) * t;
+      final lon =
+          currentPoint.longitude +
+          (nextPoint.longitude - currentPoint.longitude) * t;
+
+      // Calcular ángulo de rotación basado en la dirección del movimiento
+      final angle = atan2(
+        nextPoint.longitude - currentPoint.longitude,
+        nextPoint.latitude - currentPoint.latitude,
+      );
+
+      return Marker(
+        point: LatLng(lat, lon),
+        width: 24,
+        height: 24,
+        child: Transform.rotate(
+          angle: angle,
+          child: CustomPaint(
+            size: const Size(24, 24),
+            painter: _TrianglePainter(),
+          ),
+        ),
+      );
+    }).toList();
+  }
+
+  Widget _buildZoomButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Icon(icon, color: Colors.white, size: 18),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDirectionButton() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors:
+              _isAysToCoy
+                  ? [
+                    MyApp.primaryOrange.withOpacity(0.95),
+                    MyApp.primaryOrange.withOpacity(0.85),
+                  ]
+                  : [
+                    MyApp.accentBlue.withOpacity(0.95),
+                    MyApp.accentBlue.withOpacity(0.85),
+                  ],
+        ),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withOpacity(0.8), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: (_isAysToCoy ? MyApp.primaryOrange : MyApp.accentBlue)
+                .withOpacity(0.4),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            setState(() {
+              _isAysToCoy = !_isAysToCoy;
+            });
+          },
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Icon(
+              _isAysToCoy
+                  ? Icons.arrow_forward_rounded
+                  : Icons.arrow_back_rounded,
+              color: Colors.white,
+              size: 18,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRotatingMarker({
+    required String label,
+    required Color color,
+    required double rotation,
+  }) {
+    return Transform.rotate(
+      angle: -rotation * pi / 180,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Icon(
+            Icons.location_on,
+            color: color,
+            size: 40,
+            shadows: [
+              Shadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompassRose(double rotation) {
+    // Brújula estilo Google Maps - al tocar resetea al norte
     return GestureDetector(
-      onPanUpdate: (details) {
-        // Calcular el ángulo basado en la posición del toque
-        final center = const Offset(60, 60); // Centro del widget (120/2)
-        final touchPosition = details.localPosition;
-        
-        // Calcular el ángulo desde el centro hasta el punto tocado
-        final dx = touchPosition.dx - center.dx;
-        final dy = touchPosition.dy - center.dy;
-        
-        // Calcular ángulo en radianes y convertir a grados
-        // atan2 da el ángulo desde el eje X positivo, en sentido antihorario
-        var angleRadians = atan2(dy, dx);
-        var angleDegrees = angleRadians * 180 / pi;
-        
-        // Ajustar para que 0° sea arriba (norte) en lugar de derecha
-        // Y que gire en sentido horario (como una brújula real)
-        angleDegrees = (angleDegrees + 90) % 360;
-        
-        setState(() {
-          _mapRotation = angleDegrees;
-        });
-        
-        // Rotar el mapa - en flutter_map, valores positivos rotan en sentido horario
-        mapController.rotate(angleDegrees);
+      onTap: () {
+        // Al tocar, resetear la rotación del mapa al norte (0°)
+        _mapRotationNotifier.value = 0.0;
+        mapController.rotate(0.0);
       },
       child: Container(
-        width: 120,
-        height: 120,
+        width: 48,
+        height: 48,
         decoration: BoxDecoration(
+          color: Colors.white,
           shape: BoxShape.circle,
+          border: Border.all(
+            color: MyApp.primaryOrange.withOpacity(0.3),
+            width: 2,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: MyApp.primaryOrange.withOpacity(0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: Stack(
-          children: [
-            // Anillo exterior giratorio
-            Transform.rotate(
-              angle: _mapRotation * pi / 180,
-              child: Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: MyApp.primaryNavy.withOpacity(0.2),
-                    width: 8,
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    // Indicador naranja pastel (marcador de orientación)
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFB347), // Naranja pastel
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFFFFB347).withOpacity(0.6),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                            border: Border.all(
-                              color: Colors.white,
-                              width: 2,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Círculo interior fijo (rosa de los vientos)
-            Center(
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: MyApp.primaryNavy.withOpacity(0.3),
-                    width: 2,
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    // Círculo de fondo con gradiente
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            Colors.white,
-                            MyApp.lightGreyBackground.withOpacity(0.3),
-                          ],
-                          stops: const [0.6, 1.0],
-                        ),
-                      ),
-                    ),
-                    
-                    // Líneas divisorias
-                    CustomPaint(
-                      size: const Size(100, 100),
-                      painter: _CompassLinePainter(),
-                    ),
-
-                    // Puntos cardinales
-                    Center(
-                      child: SizedBox(
-                        width: 100,
-                        height: 100,
-                        child: Stack(
-                          children: [
-                            // Norte (arriba)
-                            Positioned(
-                              top: 8,
-                              left: 0,
-                              right: 0,
-                              child: Center(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: MyApp.primaryNavy,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: const Text(
-                                    'N',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            // Sur (abajo)
-                            Positioned(
-                              bottom: 8,
-                              left: 0,
-                              right: 0,
-                              child: Center(
-                                child: Text(
-                                  'S',
-                                  style: TextStyle(
-                                    color: MyApp.primaryNavy.withOpacity(0.7),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            // Este (derecha)
-                            Positioned(
-                              right: 8,
-                              top: 0,
-                              bottom: 0,
-                              child: Center(
-                                child: Text(
-                                  'E',
-                                  style: TextStyle(
-                                    color: MyApp.primaryNavy.withOpacity(0.7),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            // Oeste (izquierda)
-                            Positioned(
-                              left: 8,
-                              top: 0,
-                              bottom: 0,
-                              child: Center(
-                                child: Text(
-                                  'O',
-                                  style: TextStyle(
-                                    color: MyApp.primaryNavy.withOpacity(0.7),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            // Centro con flecha norte
-                            Center(
-                              child: Container(
-                                width: 30,
-                                height: 30,
-                                decoration: BoxDecoration(
-                                  color: MyApp.primaryOrange,
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: MyApp.primaryOrange.withOpacity(0.4),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(
-                                  Icons.navigation,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+        child: Transform.rotate(
+          // La aguja gira en el mismo sentido que la rotación del mapa
+          angle: rotation * pi / 180,
+          child: CustomPaint(
+            size: const Size(48, 48),
+            painter: _GoogleMapsCompassPainter(),
+          ),
         ),
       ),
     );
   }
 }
 
-// Pintor personalizado para las líneas de la rosa de los vientos
-class _CompassLinePainter extends CustomPainter {
+// Pintor de brújula estilo Google Maps con colores Suray
+class _GoogleMapsCompassPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = MyApp.primaryNavy.withOpacity(0.15)
-      ..strokeWidth = 1.0
-      ..style = PaintingStyle.stroke;
+    final center = Offset(size.width / 2, size.height / 2);
+    final needleLength = size.width * 0.38;
+
+    // Punta norte (naranja pastel vibrante)
+    final northPaint =
+        Paint()
+          ..color = const Color(0xFFFFB347) // Naranja pastel
+          ..style = PaintingStyle.fill;
+
+    final northPath =
+        ui.Path()
+          ..moveTo(center.dx, center.dy - needleLength) // Punta
+          ..lineTo(center.dx - 6, center.dy) // Base izquierda
+          ..lineTo(center.dx + 6, center.dy) // Base derecha
+          ..close();
+
+    canvas.drawPath(northPath, northPaint);
+
+    // Borde naranja más oscuro para la punta norte
+    final northBorderPaint =
+        Paint()
+          ..color = MyApp.primaryOrange
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5;
+
+    canvas.drawPath(northPath, northBorderPaint);
+
+    // Punta sur (azul pastel)
+    final southPaint =
+        Paint()
+          ..color = const Color(0xFF87CEEB) // Azul pastel (sky blue)
+          ..style = PaintingStyle.fill;
+
+    final southPath =
+        ui.Path()
+          ..moveTo(center.dx, center.dy + needleLength) // Punta
+          ..lineTo(center.dx - 6, center.dy) // Base izquierda
+          ..lineTo(center.dx + 6, center.dy) // Base derecha
+          ..close();
+
+    canvas.drawPath(southPath, southPaint);
+
+    // Borde azul para la punta sur
+    final southBorderPaint =
+        Paint()
+          ..color = MyApp.accentBlue.withOpacity(0.8)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5;
+
+    canvas.drawPath(southPath, southBorderPaint);
+
+    // Círculo central blanco
+    final centerPaint =
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(center, 4, centerPaint);
+
+    // Borde del círculo central
+    final centerBorderPaint =
+        Paint()
+          ..color = MyApp.primaryOrange.withOpacity(0.6)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5;
+
+    canvas.drawCircle(center, 4, centerBorderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// Pintor de triángulo blanco para indicar dirección del viaje
+class _TrianglePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint =
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.fill;
+
+    final strokePaint =
+        Paint()
+          ..color = MyApp.primaryNavy.withOpacity(0.8)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5;
 
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
 
-    // Líneas principales (N-S, E-O)
-    // Norte-Sur
-    canvas.drawLine(
-      Offset(center.dx, center.dy - radius + 10),
-      Offset(center.dx, center.dy + radius - 10),
-      paint,
-    );
+    // Triángulo apuntando hacia arriba (dirección del viaje)
+    final path =
+        ui.Path()
+          ..moveTo(center.dx, center.dy - 8) // Punta superior
+          ..lineTo(center.dx - 6, center.dy + 6) // Base izquierda
+          ..lineTo(center.dx + 6, center.dy + 6) // Base derecha
+          ..close();
 
-    // Este-Oeste
-    canvas.drawLine(
-      Offset(center.dx - radius + 10, center.dy),
-      Offset(center.dx + radius - 10, center.dy),
-      paint,
-    );
+    // Rellenar triángulo
+    canvas.drawPath(path, paint);
 
-    // Líneas secundarias (diagonales)
-    final paintSecondary = Paint()
-      ..color = MyApp.primaryNavy.withOpacity(0.08)
-      ..strokeWidth = 1.0
-      ..style = PaintingStyle.stroke;
-
-    // NE-SO
-    canvas.drawLine(
-      Offset(center.dx - radius * 0.6, center.dy - radius * 0.6),
-      Offset(center.dx + radius * 0.6, center.dy + radius * 0.6),
-      paintSecondary,
-    );
-
-    // NO-SE
-    canvas.drawLine(
-      Offset(center.dx - radius * 0.6, center.dy + radius * 0.6),
-      Offset(center.dx + radius * 0.6, center.dy - radius * 0.6),
-      paintSecondary,
-    );
+    // Borde del triángulo
+    canvas.drawPath(path, strokePaint);
   }
 
   @override

@@ -500,108 +500,114 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
 
-            // 3. Contenido de la UI - Todo en un SingleChildScrollView
-            SingleChildScrollView(
-              child: SafeArea(
-                child: OrientationBuilder(
-                  builder: (context, orientation) {
-                    return Column(
-                      children: [
-                        // Header adaptable según orientación
-                        _buildHeader(orientation),
-
-                        // Contenido principal
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20.0,
-                          ),
-                          child: Column(
+            // 3. Contenido de la UI - Estructura con Column para footer fijo
+            Column(
+              children: [
+                // Contenido desplazable
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: SafeArea(
+                      child: OrientationBuilder(
+                        builder: (context, orientation) {
+                          return Column(
                             children: [
-                              // Tarjeta de Información del Día
-                              _buildCurrentDayInfo(),
+                              // Header adaptable según orientación
+                              _buildHeader(orientation),
 
-                              const SizedBox(height: 5),
-
-                              // Botón de Horarios con texto responsive
-                              ElevatedButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (context) => SchedulesPage(
-                                            firestore: _firestore,
-                                            holidays: _holidays,
-                                            nextAysenDeparture:
-                                                _nextAysenDeparture,
-                                            nextCoyhaiqueDeparture:
-                                                _nextCoyhaiqueDeparture,
-                                            currentDayCollection:
-                                                _currentDayCollection,
-                                          ),
-                                    ),
-                                  );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.black,
-                                  foregroundColor: MyApp.primaryOrange,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 16,
-                                    horizontal: 20,
-                                  ),
-                                  minimumSize: const Size(
-                                    double.infinity,
-                                    60,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  elevation: 3,
-                                  shadowColor: MyApp.primaryOrange
-                                      .withOpacity(0.4),
+                              // Contenido principal
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20.0,
                                 ),
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.center,
-                                    children: [
-                                      Image.asset(
-                                        'assets/icons/bus_reloj.png',
-                                        width: 28,
-                                        height: 28,
-                                        fit: BoxFit.contain,
+                                child: Column(
+                                  children: [
+                                    // Tarjeta de Información del Día
+                                    _buildCurrentDayInfo(),
+
+                                    const SizedBox(height: 5),
+
+                                    // Botón de Horarios con texto responsive
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder:
+                                                (context) => SchedulesPage(
+                                                  firestore: _firestore,
+                                                  holidays: _holidays,
+                                                  nextAysenDeparture:
+                                                      _nextAysenDeparture,
+                                                  nextCoyhaiqueDeparture:
+                                                      _nextCoyhaiqueDeparture,
+                                                  currentDayCollection:
+                                                      _currentDayCollection,
+                                                ),
+                                          ),
+                                        );
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.black,
+                                        foregroundColor: MyApp.primaryOrange,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                          horizontal: 20,
+                                        ),
+                                        minimumSize: const Size(
+                                          double.infinity,
+                                          60,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        elevation: 3,
+                                        shadowColor: MyApp.primaryOrange
+                                            .withOpacity(0.4),
                                       ),
-                                      const SizedBox(width: 14),
-                                      const Text(
-                                        'TODOS LOS HORARIOS',
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Image.asset(
+                                              'assets/icons/bus_reloj.png',
+                                              width: 28,
+                                              height: 28,
+                                              fit: BoxFit.contain,
+                                            ),
+                                            const SizedBox(width: 14),
+                                            const Text(
+                                              'TODOS LOS HORARIOS',
+                                              style: TextStyle(
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            const Icon(
+                                              Icons.touch_app_rounded,
+                                              size: 28,
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      const SizedBox(width: 12),
-                                      const Icon(
-                                        Icons.touch_app_rounded,
-                                        size: 28,
-                                      ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
                               ),
+                              const SizedBox(height: 40),
                             ],
-                          ),
-                        ),
-
-                        // Footer scrolleable al final del contenido
-                        const SizedBox(height: 40),
-                        _buildFooter(),
-                      ],
-                    );
-                  },
+                          );
+                        },
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                // Footer fijo al final
+                _buildFooter(),
+              ],
             ),
           ],
         ),
@@ -1229,7 +1235,7 @@ class _HomePageState extends State<HomePage> {
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
-                'Copyright © 2025 - MMKT GRUPO SURAY - CMO dante@suray.cl',
+                'Copyright © 2026 - MMKT GRUPO SURAY - CMO dante@suray.cl',
                 style: TextStyle(
                   color: Colors.black.withOpacity(0.6),
                   fontSize: 10,

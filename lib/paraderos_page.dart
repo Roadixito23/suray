@@ -10,6 +10,7 @@ import 'package:geolocator/geolocator.dart';
 import 'main.dart';
 import 'route_data.dart';
 import 'floating_notification.dart';
+import 'config/api_keys.dart';
 
 class ParaderosPage extends StatefulWidget {
   const ParaderosPage({super.key});
@@ -21,7 +22,7 @@ class ParaderosPage extends StatefulWidget {
 class _ParaderosPageState extends State<ParaderosPage>
     with TickerProviderStateMixin {
   // Coordenadas de los puntos
-  final LatLng puertoAysen = const LatLng(-45.401077, -72.687320);
+  final LatLng puertoAysen = const LatLng(-45.40111614852224, -72.68738064167634);
   final LatLng coyhaique = const LatLng(-45.582039, -72.078136);
   final LatLng centerPoint = const LatLng(-45.4915, -72.3827);
 
@@ -50,31 +51,19 @@ class _ParaderosPageState extends State<ParaderosPage>
 
   // Animación de triángulos viajando por la ruta
   late AnimationController _routeAnimationController;
-  final List<double> _trianglePositions = [0.0, 0.5]; // 2 triángulos espaciados
-
-  // Cache de distancias acumuladas para velocidad constante
-  List<double> _routeDistancesAysToCoy = [];
-  List<double> _routeDistancesCoyToAys = [];
-  double _totalDistanceAysToCoy = 0.0;
-  double _totalDistanceCoyToAys = 0.0;
 
   // ScrollController para la barra de scroll horizontal
   final ScrollController _buttonsScrollController = ScrollController();
+
+  // Info card del terminal
+  String? _selectedTerminal;
+  late AnimationController _cardAnimationController;
+  late Animation<Offset> _cardSlideAnimation;
 
   @override
   void initState() {
     super.initState();
     _getCurrentLocation();
-    
-    // Precalcular distancias acumuladas para ambas rutas
-    _routeDistancesAysToCoy = _calculateCumulativeDistances(_routeAysToCoy);
-    _routeDistancesCoyToAys = _calculateCumulativeDistances(_routeCoyToAys);
-    _totalDistanceAysToCoy = _routeDistancesAysToCoy.isNotEmpty 
-        ? _routeDistancesAysToCoy.last 
-        : 0.0;
-    _totalDistanceCoyToAys = _routeDistancesCoyToAys.isNotEmpty 
-        ? _routeDistancesCoyToAys.last 
-        : 0.0;
 
     // Inicializar animación de triángulos
     _routeAnimationController =
@@ -98,6 +87,19 @@ class _ParaderosPageState extends State<ParaderosPage>
         _mapRotationNotifier.value = currentRotation;
       }
     });
+
+    // Animación de la tarjeta de terminal (emerge desde abajo)
+    _cardAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+    );
+    _cardSlideAnimation = Tween<Offset>(
+      begin: const Offset(0, 1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _cardAnimationController,
+      curve: Curves.easeOutCubic,
+    ));
   }
 
   Future<void> _getCurrentLocation() async {
@@ -206,105 +208,13 @@ class _ParaderosPageState extends State<ParaderosPage>
         position.longitude <= maxLng;
   }
 
-  // Calcular distancias acumuladas entre puntos de la ruta
-  List<double> _calculateCumulativeDistances(List<LatLng> route) {
-    if (route.isEmpty) return [];
-    
-    final distances = <double>[0.0];
-    double accumulated = 0.0;
-    
-    for (int i = 1; i < route.length; i++) {
-      final prev = route[i - 1];
-      final current = route[i];
-      
-      // Calcular distancia euclidiana (aproximación)
-      final latDiff = current.latitude - prev.latitude;
-      final lonDiff = current.longitude - prev.longitude;
-      final distance = sqrt(latDiff * latDiff + lonDiff * lonDiff);
-      
-      accumulated += distance;
-      distances.add(accumulated);
-    }
-    
-    return distances;
-  }
-
-  // Interpolar posición basada en distancia recorrida
-  LatLng _interpolateByDistance(
-    List<LatLng> route,
-    List<double> distances,
-    double targetDistance,
-  ) {
-    if (route.isEmpty || distances.isEmpty) {
-      return const LatLng(0, 0);
-    }
-
-    // Encontrar el segmento donde está la distancia objetivo
-    int segmentIndex = 0;
-    for (int i = 0; i < distances.length - 1; i++) {
-      if (targetDistance >= distances[i] && targetDistance <= distances[i + 1]) {
-        segmentIndex = i;
-        break;
-      }
-    }
-
-    // Si estamos al final, retornar último punto
-    if (segmentIndex >= route.length - 1) {
-      return route.last;
-    }
-
-    final currentPoint = route[segmentIndex];
-    final nextPoint = route[segmentIndex + 1];
-    final segmentStart = distances[segmentIndex];
-    final segmentEnd = distances[segmentIndex + 1];
-    final segmentLength = segmentEnd - segmentStart;
-
-    // Interpolar dentro del segmento
-    final t = segmentLength > 0 
-        ? (targetDistance - segmentStart) / segmentLength 
-        : 0.0;
-
-    final lat = currentPoint.latitude + 
-        (nextPoint.latitude - currentPoint.latitude) * t;
-    final lon = currentPoint.longitude + 
-        (nextPoint.longitude - currentPoint.longitude) * t;
-
-    return LatLng(lat, lon);
-  }
-
-  // Calcular ángulo de dirección en un punto de la ruta
-  double _calculateAngleAtDistance(
-    List<LatLng> route,
-    List<double> distances,
-    double targetDistance,
-  ) {
-    if (route.isEmpty || distances.isEmpty) return 0.0;
-
-    // Encontrar el segmento
-    int segmentIndex = 0;
-    for (int i = 0; i < distances.length - 1; i++) {
-      if (targetDistance >= distances[i] && targetDistance <= distances[i + 1]) {
-        segmentIndex = i;
-        break;
-      }
-    }
-
-    if (segmentIndex >= route.length - 1) {
-      segmentIndex = route.length - 2;
-    }
-
-    final currentPoint = route[segmentIndex];
-    final nextPoint = route[segmentIndex + 1];
-
-    return atan2(
-      nextPoint.longitude - currentPoint.longitude,
-      nextPoint.latitude - currentPoint.latitude,
-    );
-  }
+  // TODO: Métodos de cálculo de distancias y triángulos animados removidos temporalmente
+  // Se pueden reimplementar en el futuro usando capas dinámicas de Mapbox
 
   @override
   void dispose() {
     _routeAnimationController.dispose();
+    _cardAnimationController.dispose();
     _mapEventSubscription?.cancel();
     _mapRotationNotifier.dispose();
     _buttonsScrollController.dispose();
@@ -351,8 +261,13 @@ class _ParaderosPageState extends State<ParaderosPage>
               children: [
                 TileLayer(
                   urlTemplate:
-                      'https://api.maptiler.com/maps/streets-v4/{z}/{x}/{y}.png?key=JlwBUJ8jYaM19HSPdZrv',
+                      'https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token=${ApiKeys.mapboxAccessToken}',
+                  additionalOptions: {
+                    'accessToken': ApiKeys.mapboxAccessToken,
+                    'id': 'mapbox.streets',
+                  },
                   userAgentPackageName: 'com.suray.app',
+                  tileSize: 256,
                 ),
                 // Ruta que sigue las carreteras
                 PolylineLayer(
@@ -394,38 +309,42 @@ class _ParaderosPageState extends State<ParaderosPage>
                           ),
                         ),
                       ),
-                    // Triángulos animados en la ruta
-                    ..._buildAnimatedTriangles(),
                     // Puerto Aysén
+                    // height=88 (2x tamaño del ícono): la punta del pin cae
+                    // exactamente en el centro del widget = coordenada del mapa.
                     Marker(
                       point: puertoAysen,
-                      width: 80,
-                      height: 80,
-                      child: ValueListenableBuilder<double>(
-                        valueListenable: _mapRotationNotifier,
-                        builder: (context, rotation, _) {
-                          return _buildRotatingMarker(
-                            label: 'Puerto Aysén',
-                            color: MyApp.primaryNavy,
-                            rotation: rotation,
-                          );
-                        },
+                      width: 44,
+                      height: 88,
+                      child: GestureDetector(
+                        onTap: () => _showTerminalCard('aysen'),
+                        child: ValueListenableBuilder<double>(
+                          valueListenable: _mapRotationNotifier,
+                          builder: (context, rotation, _) {
+                            return _buildPinMarker(
+                              color: MyApp.primaryNavy,
+                              rotation: rotation,
+                            );
+                          },
+                        ),
                       ),
                     ),
                     // Coyhaique
                     Marker(
                       point: coyhaique,
-                      width: 80,
-                      height: 80,
-                      child: ValueListenableBuilder<double>(
-                        valueListenable: _mapRotationNotifier,
-                        builder: (context, rotation, _) {
-                          return _buildRotatingMarker(
-                            label: 'Coyhaique',
-                            color: MyApp.accentBlue,
-                            rotation: rotation,
-                          );
-                        },
+                      width: 44,
+                      height: 88,
+                      child: GestureDetector(
+                        onTap: () => _showTerminalCard('coyhaique'),
+                        child: ValueListenableBuilder<double>(
+                          valueListenable: _mapRotationNotifier,
+                          builder: (context, rotation, _) {
+                            return _buildPinMarker(
+                              color: MyApp.accentBlue,
+                              rotation: rotation,
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ],
@@ -671,6 +590,17 @@ class _ParaderosPageState extends State<ParaderosPage>
               ),
             ),
 
+          // Tarjeta de información del terminal
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: SlideTransition(
+              position: _cardSlideAnimation,
+              child: _buildTerminalCard(),
+            ),
+          ),
+
           // Brújula estilo Google Maps - con ValueListenableBuilder para rebuild
           Positioned(
             top: 140,
@@ -730,39 +660,6 @@ class _ParaderosPageState extends State<ParaderosPage>
   }
 
   // Construir triángulos animados que viajan por la ruta con velocidad constante
-  List<Marker> _buildAnimatedTriangles() {
-    final route = _isAysToCoy ? _routeAysToCoy : _routeCoyToAys;
-    final distances = _isAysToCoy ? _routeDistancesAysToCoy : _routeDistancesCoyToAys;
-    final totalDistance = _isAysToCoy ? _totalDistanceAysToCoy : _totalDistanceCoyToAys;
-    
-    if (route.isEmpty || distances.isEmpty || totalDistance == 0) return [];
-
-    return _trianglePositions.map((offset) {
-      // Calcular distancia recorrida basada en el progreso de la animación
-      final progress = (_routeAnimationController.value + offset) % 1.0;
-      final targetDistance = progress * totalDistance;
-
-      // Interpolar posición basada en distancia (velocidad constante)
-      final position = _interpolateByDistance(route, distances, targetDistance);
-
-      // Calcular ángulo de rotación basado en la dirección en ese punto
-      final angle = _calculateAngleAtDistance(route, distances, targetDistance);
-
-      return Marker(
-        point: position,
-        width: 24,
-        height: 24,
-        child: Transform.rotate(
-          angle: angle,
-          child: CustomPaint(
-            size: const Size(24, 24),
-            painter: _TrianglePainter(),
-          ),
-        ),
-      );
-    }).toList();
-  }
-
   Widget _buildLocationButton() {
     return Container(
       decoration: BoxDecoration(
@@ -894,52 +791,141 @@ class _ParaderosPageState extends State<ParaderosPage>
     );
   }
 
-  Widget _buildRotatingMarker({
-    required String label,
+  void _showTerminalCard(String terminal) {
+    setState(() => _selectedTerminal = terminal);
+    _cardAnimationController.forward();
+  }
+
+  void _hideTerminalCard() {
+    if (_selectedTerminal == null) return;
+    _cardAnimationController.reverse().then((_) {
+      if (mounted) setState(() => _selectedTerminal = null);
+    });
+  }
+
+  Widget _buildPinMarker({
     required Color color,
     required double rotation,
   }) {
+    // Lógica de precisión:
+    // - Marker.height = 88 (2× el tamaño del ícono)
+    // - El centro del widget (y=44) coincide con la coordenada del mapa
+    // - El ícono (44px) ocupa la MITAD SUPERIOR (y=0→44), con la punta en y=44
+    // - Resultado: punta del pin = centro del widget = coordenada del mapa ✓
+    // - Transform.rotate con pivot en Alignment.center (defecto) = pivot en y=44 = punta ✓
     return Transform.rotate(
       angle: -rotation * pi / 180,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Icon(
+      child: SizedBox(
+        width: 44,
+        height: 88,
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: Icon(
             Icons.location_on,
             color: color,
-            size: 40,
+            size: 44,
             shadows: [
               Shadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 4,
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
-        ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTerminalCard() {
+    if (_selectedTerminal == null) return const SizedBox.shrink();
+
+    final isAysen = _selectedTerminal == 'aysen';
+    final color = isAysen ? MyApp.primaryNavy : MyApp.accentBlue;
+    final description = isAysen ? 'Aysén Suray' : 'Coyhaique Suray';
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              // Ícono del terminal
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.location_on,
+                  color: Colors.white,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Textos
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Terminal',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                        fontFamily: 'Hemiheads',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Botón cerrar
+              GestureDetector(
+                onTap: _hideTerminalCard,
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    size: 20,
+                    color: Colors.grey,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1061,37 +1047,5 @@ class _GoogleMapsCompassPainter extends CustomPainter {
 }
 
 // Pintor de triángulo blanco para indicar dirección del viaje
-class _TrianglePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint =
-        Paint()
-          ..color = Colors.white
-          ..style = PaintingStyle.fill;
+// TODO: _TrianglePainter removido - no se usa con Mapbox
 
-    final strokePaint =
-        Paint()
-          ..color = MyApp.primaryNavy.withOpacity(0.8)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5;
-
-    final center = Offset(size.width / 2, size.height / 2);
-
-    // Triángulo apuntando hacia arriba (dirección del viaje)
-    final path =
-        ui.Path()
-          ..moveTo(center.dx, center.dy - 8) // Punta superior
-          ..lineTo(center.dx - 6, center.dy + 6) // Base izquierda
-          ..lineTo(center.dx + 6, center.dy + 6) // Base derecha
-          ..close();
-
-    // Rellenar triángulo
-    canvas.drawPath(path, paint);
-
-    // Borde del triángulo
-    canvas.drawPath(path, strokePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}

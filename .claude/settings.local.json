@@ -3,7 +3,8 @@
     "allow": [
       "Bash(dart:*)",
       "Bash(flutter analyze:*)",
-      "Bash(flutter pub get:*)"
+      "Bash(flutter pub get:*)",
+      "Bash(firebase --version:*)"
     ]
   }
 }

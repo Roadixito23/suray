@@ -1,7 +1,6 @@
-﻿import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart';
 
 class RouteData {
-  // Ruta Aysén -> Coyhaique (Naranja)
   static const List<LatLng> routeAysToCoy = [
     LatLng(-45.40104, -72.68723),
     LatLng(-45.40141, -72.68695),
@@ -1111,6 +1110,7 @@ class RouteData {
     LatLng(-45.58268, -72.07765),
     LatLng(-45.58224, -72.07755),
   ];
+
 
   // Ruta Coyhaique -> Aysén (Celeste)
   static const List<LatLng> routeCoyToAys = [

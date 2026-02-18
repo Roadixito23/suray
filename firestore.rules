@@ -2,8 +2,30 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Denegar por defecto
     match /{document=**} {
       allow read, write: if false;
+    }
+
+    // Colecciones existentes: solo lectura
+    match /feriados/{year} {
+      allow read: if true;
+    }
+
+    match /horarios/{region}/{dayType}/{docId} {
+      allow read: if true;
+    }
+
+    match /horarios_especiales_feriados/{year}/{region}/{docId} {
+      allow read: if true;
+    }
+
+    // Estadísticas: escritura restringida al doc 'visitas' con solo los campos permitidos
+    match /estadisticas/visitas {
+      allow read: if false;
+      allow write: if request.resource.data.keys().hasOnly(['cantidadVisitas', 'ultimaActualizacion'])
+                   && request.resource.data.cantidadVisitas is int;
     }
   }
 }

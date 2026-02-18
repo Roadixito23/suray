@@ -500,114 +500,123 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
 
-            // 3. Contenido de la UI - Estructura con Column para footer fijo
-            Column(
-              children: [
-                // Contenido desplazable
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: SafeArea(
-                      child: OrientationBuilder(
-                        builder: (context, orientation) {
-                          return Column(
-                            children: [
-                              // Header adaptable según orientación
-                              _buildHeader(orientation),
+            // 3. Contenido de la UI - Footer siempre pegado al fondo
+            LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        SafeArea(
+                          bottom: false,
+                          child: OrientationBuilder(
+                            builder: (context, orientation) {
+                              return Column(
+                                children: [
+                                  // Header adaptable según orientación
+                                  _buildHeader(orientation),
 
-                              // Contenido principal
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20.0,
-                                ),
-                                child: Column(
-                                  children: [
-                                    // Tarjeta de Información del Día
-                                    _buildCurrentDayInfo(),
-
-                                    const SizedBox(height: 5),
-
-                                    // Botón de Horarios con texto responsive
-                                    ElevatedButton(
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder:
-                                                (context) => SchedulesPage(
-                                                  firestore: _firestore,
-                                                  holidays: _holidays,
-                                                  nextAysenDeparture:
-                                                      _nextAysenDeparture,
-                                                  nextCoyhaiqueDeparture:
-                                                      _nextCoyhaiqueDeparture,
-                                                  currentDayCollection:
-                                                      _currentDayCollection,
-                                                ),
-                                          ),
-                                        );
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.black,
-                                        foregroundColor: MyApp.primaryOrange,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 16,
-                                          horizontal: 20,
-                                        ),
-                                        minimumSize: const Size(
-                                          double.infinity,
-                                          60,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        elevation: 3,
-                                        shadowColor: MyApp.primaryOrange
-                                            .withOpacity(0.4),
-                                      ),
-                                      child: FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Image.asset(
-                                              'assets/icons/bus_reloj.png',
-                                              width: 28,
-                                              height: 28,
-                                              fit: BoxFit.contain,
-                                            ),
-                                            const SizedBox(width: 14),
-                                            const Text(
-                                              'TODOS LOS HORARIOS',
-                                              style: TextStyle(
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            const Icon(
-                                              Icons.touch_app_rounded,
-                                              size: 28,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
+                                  // Contenido principal
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20.0,
                                     ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 40),
-                            ],
-                          );
-                        },
-                      ),
+                                    child: Column(
+                                      children: [
+                                        // Tarjeta de Información del Día
+                                        _buildCurrentDayInfo(),
+
+                                        const SizedBox(height: 5),
+
+                                        // Botón de Horarios con texto responsive
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder:
+                                                    (context) => SchedulesPage(
+                                                      firestore: _firestore,
+                                                      holidays: _holidays,
+                                                      nextAysenDeparture:
+                                                          _nextAysenDeparture,
+                                                      nextCoyhaiqueDeparture:
+                                                          _nextCoyhaiqueDeparture,
+                                                      currentDayCollection:
+                                                          _currentDayCollection,
+                                                    ),
+                                              ),
+                                            );
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.black,
+                                            foregroundColor: MyApp.primaryOrange,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 16,
+                                              horizontal: 20,
+                                            ),
+                                            minimumSize: const Size(
+                                              double.infinity,
+                                              60,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            elevation: 3,
+                                            shadowColor: MyApp.primaryOrange
+                                                .withOpacity(0.4),
+                                          ),
+                                          child: FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Image.asset(
+                                                  'assets/icons/bus_reloj.png',
+                                                  width: 28,
+                                                  height: 28,
+                                                  fit: BoxFit.contain,
+                                                ),
+                                                const SizedBox(width: 14),
+                                                const Text(
+                                                  'TODOS LOS HORARIOS',
+                                                  style: TextStyle(
+                                                    fontSize: 20,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                const Icon(
+                                                  Icons.touch_app_rounded,
+                                                  size: 28,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 40),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                        // Footer siempre pegado al fondo de la pantalla
+                        _buildFooter(),
+                      ],
                     ),
                   ),
-                ),
-                // Footer fijo al final
-                _buildFooter(),
-              ],
+                );
+              },
             ),
           ],
         ),

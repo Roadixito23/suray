@@ -303,23 +303,6 @@ class _ParaderosPageState extends State<ParaderosPage>
                     keepBuffer: 2, // Reducir tiles en buffer
                     tileProvider: NetworkTileProvider(),
                   ),
-                  // Ruta que sigue las carreteras (optimizada)
-                  PolylineLayer(
-                    polylines: [
-                      Polyline(
-                        points: _isAysToCoy ? _routeAysToCoy : _routeCoyToAys,
-                        strokeWidth: 4.0,
-                        color:
-                            _isAysToCoy
-                                ? MyApp.primaryOrange
-                                : MyApp.accentBlue,
-                        borderStrokeWidth: 2.0,
-                        borderColor: MyApp.primaryNavy,
-                        // Optimizaciones de renderizado
-                        useStrokeWidthInMeter: false,
-                      ),
-                    ],
-                  ),
                   // Marcadores
                   MarkerLayer(
                     markers: [

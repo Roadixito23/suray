@@ -8,6 +8,8 @@ import 'schedules_page.dart';
 import 'paraderos_page.dart';
 import 'main.dart';
 import 'dual_weather_service.dart';
+import 'services/notification_service.dart';
+import 'floating_notification.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -45,6 +47,11 @@ class _HomePageState extends State<HomePage> {
   Timer? _imageRotationTimer;
   int _currentPage = 0;
 
+  // Notificaciones
+  final NotificationService _notificationService = NotificationService();
+  bool _showNotificationBanner = true;
+  bool _notificationsEnabled = false;
+
   @override
   void initState() {
     super.initState();
@@ -72,6 +79,21 @@ class _HomePageState extends State<HomePage> {
         });
       }
     });
+
+    // Inicializar notificaciones y mostrar banner después de 3 segundos
+    _initializeNotifications();
+  }
+
+  Future<void> _initializeNotifications() async {
+    await Future.delayed(const Duration(seconds: 3));
+    final enabled = await _notificationService.checkPermissions();
+    if (mounted) {
+      setState(() {
+        _notificationsEnabled = enabled;
+        _showNotificationBanner =
+            !enabled; // Solo mostrar si no están habilitadas
+      });
+    }
   }
 
   @override
@@ -465,6 +487,40 @@ class _HomePageState extends State<HomePage> {
       }[month] ??
       '';
 
+  // Método para activar notificaciones
+  Future<void> _enableNotifications() async {
+    final enabled = await _notificationService.requestPermissions();
+
+    if (mounted) {
+      setState(() {
+        _notificationsEnabled = enabled;
+        _showNotificationBanner = false;
+      });
+
+      if (enabled) {
+        // Mostrar mensaje de éxito
+        FloatingNotification.show(
+          context,
+          message:
+              '¡Notificaciones activadas! Te avisaremos sobre cambios importantes.',
+          type: NotificationType.success,
+          duration: const Duration(seconds: 3),
+        );
+
+        // Enviar notificación de prueba
+        await _notificationService.sendTestNotification();
+      } else {
+        FloatingNotification.show(
+          context,
+          message:
+              'No se pudieron activar las notificaciones. Verifica los permisos de tu navegador.',
+          type: NotificationType.error,
+          duration: const Duration(seconds: 4),
+        );
+      }
+    }
+  }
+
   // --- WIDGETS DE LA PÁGINA DE INICIO ---
 
   @override
@@ -554,7 +610,8 @@ class _HomePageState extends State<HomePage> {
                                           },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: Colors.black,
-                                            foregroundColor: MyApp.primaryOrange,
+                                            foregroundColor:
+                                                MyApp.primaryOrange,
                                             padding: const EdgeInsets.symmetric(
                                               vertical: 16,
                                               horizontal: 20,
@@ -621,6 +678,15 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
+      // Banner de notificaciones flotante
+      floatingActionButton:
+          _showNotificationBanner
+              ? Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                child: _buildNotificationBanner(),
+              )
+              : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 
@@ -1162,9 +1228,7 @@ class _HomePageState extends State<HomePage> {
 
   // Función para abrir Facebook
   Future<void> _openFacebook() async {
-    final Uri url = Uri.parse(
-      'https://www.facebook.com/buses.suray.cargo',
-    );
+    final Uri url = Uri.parse('https://www.facebook.com/buses.suray.cargo');
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       debugPrint('No se pudo abrir la URL: $url');
     }
@@ -1222,9 +1286,7 @@ class _HomePageState extends State<HomePage> {
                         Container(
                           width: 22,
                           height: 22,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                          ),
+                          decoration: BoxDecoration(shape: BoxShape.circle),
                           child: ClipOval(
                             child: Image.asset(
                               'assets/insta_icon.png',
@@ -1306,6 +1368,114 @@ class _HomePageState extends State<HomePage> {
                   fontWeight: FontWeight.w400,
                 ),
                 textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget del banner de notificaciones (similar al de paraderos_page)
+  Widget _buildNotificationBanner() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [MyApp.primaryOrange, MyApp.primaryOrange.withOpacity(0.85)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: MyApp.primaryOrange.withOpacity(0.4),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Ícono de notificación
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.25),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.notifications_active_rounded,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Texto
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Activa las notificaciones',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Te avisaremos sobre cambios en horarios',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Botón Activar
+                ElevatedButton(
+                  onPressed: _enableNotifications,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: MyApp.primaryOrange,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Activar ahora',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Botón X para cerrar
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _showNotificationBanner = false;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Icon(
+                Icons.close_rounded,
+                color: Colors.white,
+                size: 20,
               ),
             ),
           ),

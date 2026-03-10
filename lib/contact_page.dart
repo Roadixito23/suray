@@ -17,6 +17,10 @@ class _ContactPageState extends State<ContactPage>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
+  // Controladores de tabs para cada ciudad
+  int _puertoAysenTabIndex = 0;
+  int _coyhaiqueTabIndex = 0;
+
   @override
   void initState() {
     super.initState();
@@ -33,10 +37,9 @@ class _ContactPageState extends State<ContactPage>
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
+    );
 
     _animationController.forward();
   }
@@ -163,7 +166,9 @@ class _ContactPageState extends State<ContactPage>
                             child: Container(
                               decoration: const BoxDecoration(
                                 image: DecorationImage(
-                                  image: AssetImage('assets/home_panels/buses.png'),
+                                  image: AssetImage(
+                                    'assets/home_panels/buses.png',
+                                  ),
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -219,7 +224,10 @@ class _ContactPageState extends State<ContactPage>
                     ),
                   ),
                   child: IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new,
+                      color: Colors.white,
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ),
@@ -270,10 +278,7 @@ class _ContactPageState extends State<ContactPage>
             offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(
-          color: MyApp.borderColor.withOpacity(0.5),
-          width: 1,
-        ),
+        border: Border.all(color: MyApp.borderColor.withOpacity(0.5), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -341,10 +346,7 @@ class _ContactPageState extends State<ContactPage>
                   offset: const Offset(0, 3),
                 ),
               ],
-              border: Border.all(
-                color: color.withOpacity(0.2),
-                width: 1,
-              ),
+              border: Border.all(color: color.withOpacity(0.2), width: 1),
               image: const DecorationImage(
                 image: AssetImage('assets/home_panels/buses.png'),
                 fit: BoxFit.cover,
@@ -385,7 +387,9 @@ class _ContactPageState extends State<ContactPage>
                       children: [
                         Text(
                           title,
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleLarge?.copyWith(
                             color: color,
                             fontWeight: FontWeight.bold,
                           ),
@@ -394,7 +398,9 @@ class _ContactPageState extends State<ContactPage>
                           const SizedBox(height: 2),
                           Text(
                             subtitle,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(
                               color: color,
                               fontWeight: FontWeight.w500,
                             ),
@@ -423,7 +429,9 @@ class _ContactPageState extends State<ContactPage>
                                 Flexible(
                                   child: Text(
                                     content,
-                                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyLarge?.copyWith(
                                       fontWeight: FontWeight.w600,
                                       color: color,
                                     ),
@@ -454,8 +462,6 @@ class _ContactPageState extends State<ContactPage>
   Widget _buildLocationSection() {
     return Column(
       children: [
-
-
         // Puerto Aysén
         _buildLocationCard(
           city: 'Puerto Aysén',
@@ -478,6 +484,12 @@ class _ContactPageState extends State<ContactPage>
           color: MyApp.primaryNavy,
           delay: 300,
           backgroundImage: 'assets/home_panels/aysen.png',
+          tabIndex: _puertoAysenTabIndex,
+          onTabChange: (index) {
+            setState(() {
+              _puertoAysenTabIndex = index;
+            });
+          },
         ),
 
         const SizedBox(height: 20),
@@ -488,7 +500,8 @@ class _ContactPageState extends State<ContactPage>
           locations: [
             LocationInfo(
               type: 'Oficina de venta de pasajes',
-              address: 'Av. Norte Sur/Las Violetas, Terminal de Coyhaique, Of. N°2',
+              address:
+                  'Av. Norte Sur/Las Violetas, Terminal de Coyhaique, Of. N°2',
               phone: '672 212639',
               icon: Icons.location_city_rounded,
               mapUrl: 'https://maps.app.goo.gl/9AJMknQmkmf3tHSo8',
@@ -504,6 +517,12 @@ class _ContactPageState extends State<ContactPage>
           color: MyApp.accentBlue,
           delay: 400,
           backgroundImage: 'assets/home_panels/coyhaique.jpg',
+          tabIndex: _coyhaiqueTabIndex,
+          onTabChange: (index) {
+            setState(() {
+              _coyhaiqueTabIndex = index;
+            });
+          },
         ),
       ],
     );
@@ -540,9 +559,9 @@ class _ContactPageState extends State<ContactPage>
           children: [
             Text(
               'Servicios Especiales',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: MyApp.primaryOrange,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(color: MyApp.primaryOrange),
             ),
             const SizedBox(height: 20),
             Container(
@@ -558,9 +577,11 @@ class _ContactPageState extends State<ContactPage>
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Icon(Icons.email_rounded,
-                      size: 20,
-                      color: MyApp.primaryOrange),
+                  Icon(
+                    Icons.email_rounded,
+                    size: 20,
+                    color: MyApp.primaryOrange,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: InkWell(
@@ -585,7 +606,9 @@ class _ContactPageState extends State<ContactPage>
                             Flexible(
                               child: Text(
                                 'suray.ltda@gmail.com',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.bodyMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
                                   color: MyApp.primaryOrange,
                                 ),
@@ -617,12 +640,13 @@ class _ContactPageState extends State<ContactPage>
     required Color color,
     int delay = 0,
     String? backgroundImage,
+    required int tabIndex,
+    required Function(int) onTabChange,
   }) {
     return AnimatedContainer(
       duration: Duration(milliseconds: 600 + delay),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: MyApp.surfaceWhite,
           borderRadius: BorderRadius.circular(20),
@@ -633,31 +657,395 @@ class _ContactPageState extends State<ContactPage>
               offset: const Offset(0, 4),
             ),
           ],
-          border: Border.all(
-            color: color.withOpacity(0.2),
-            width: 1,
-          ),
-          image: backgroundImage != null
-              ? DecorationImage(
-                  image: AssetImage(backgroundImage),
-                  fit: BoxFit.cover,
-                  opacity: 0.4,
-                )
-              : null,
+          border: Border.all(color: color.withOpacity(0.2), width: 1),
+          image:
+              backgroundImage != null
+                  ? DecorationImage(
+                    image: AssetImage(backgroundImage),
+                    fit: BoxFit.cover,
+                    opacity: 0.15,
+                  )
+                  : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              city,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: color,
+            // Header con título
+            Container(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                city,
+                style: TextStyle(
+                  fontFamily: 'Hemiheads',
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
               ),
             ),
-            const SizedBox(height: 20),
-            ...locations.map((location) => _buildLocationItem(location, color)),
+
+            // Mini AppBar con tabs
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: color.withOpacity(0.1), width: 1),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildTabButton(
+                      label: 'Ubícanos',
+                      icon: Icons.location_on_rounded,
+                      isSelected: tabIndex == 0,
+                      color: color,
+                      onTap: () => onTabChange(0),
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildTabButton(
+                      label: 'Horarios',
+                      icon: Icons.access_time_rounded,
+                      isSelected: tabIndex == 1,
+                      color: color,
+                      onTap: () => onTabChange(1),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Contenido según la tab seleccionada
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0.1, 0),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  );
+                },
+                child:
+                    tabIndex == 0
+                        ? _buildLocationContent(locations, color)
+                        : _buildScheduleContent(city, color),
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTabButton({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? color : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected ? Colors.white : color.withOpacity(0.6),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? Colors.white : color.withOpacity(0.6),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLocationContent(List<LocationInfo> locations, Color color) {
+    return Column(
+      key: const ValueKey('location'),
+      children:
+          locations
+              .map((location) => _buildLocationItem(location, color))
+              .toList(),
+    );
+  }
+
+  Widget _buildScheduleContent(String city, Color color) {
+    return Column(
+      key: const ValueKey('schedule'),
+      children: [
+        // Oficina de Pasajes
+        _buildScheduleSection(
+          title: 'Oficina de Pasajes',
+          icon: Icons.confirmation_number_rounded,
+          color: color,
+          schedules: _getTicketOfficeSchedules(city),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Oficina de Correspondencia
+        _buildScheduleSection(
+          title: 'Oficina de Correspondencia',
+          icon: Icons.mail_rounded,
+          color: color,
+          schedules: _getMailOfficeSchedules(city),
+        ),
+      ],
+    );
+  }
+
+  List<Map<String, dynamic>> _getTicketOfficeSchedules(String city) {
+    // Horario específico para domingo según la ciudad
+    String sundayHours =
+        city == 'Coyhaique'
+            ? '10:00 - 15:30  /  18:00 - 19:15'
+            : '08:00 - 13:30  /  16:30 - 18:00';
+
+    return [
+      {'day': 'Lunes a Viernes', 'hours': '06:30 - 19:00'},
+      {'day': 'Sábado', 'hours': '08:00 - 19:00'},
+      {'day': 'Domingo', 'hours': sundayHours},
+    ];
+  }
+
+  List<Map<String, dynamic>> _getMailOfficeSchedules(String city) {
+    return [
+      {'day': 'Lunes a Viernes', 'hours': '09:00 - 13:30  /  15:18 - 19:00'},
+      {'day': 'Sábado', 'hours': '10:00 - 13:00'},
+      {'day': 'Domingo', 'hours': 'Cerrado'},
+    ];
+  }
+
+  Widget _buildScheduleSection({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required List<Map<String, dynamic>> schedules,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.15), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 20, color: color),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Tabla estilo Excel
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              children: [
+                // Encabezado de la tabla
+                Container(
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.15),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(6),
+                      topRight: Radius.circular(6),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                            horizontal: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              right: BorderSide(
+                                color: color.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            'Día',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: color,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 3,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                            horizontal: 12,
+                          ),
+                          child: Text(
+                            'Horario',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: color,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Filas de datos
+                ...schedules.map((schedule) {
+                  final day = schedule['day'] as String;
+                  final hours = schedule['hours'] as String;
+                  final isClosed = hours == 'Cerrado';
+
+                  return Container(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(
+                          color: color.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      color:
+                          isClosed
+                              ? Colors.red.withOpacity(0.05)
+                              : Colors.transparent,
+                    ),
+                    child: Row(
+                      children: [
+                        // Columna Día
+                        Expanded(
+                          flex: 2,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                              horizontal: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                right: BorderSide(
+                                  color: color.withOpacity(0.2),
+                                  width: 1,
+                                ),
+                              ),
+                            ),
+                            child: Text(
+                              day,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: color.withOpacity(0.9),
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Columna Horario
+                        Expanded(
+                          flex: 3,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                              horizontal: 12,
+                            ),
+                            child: _buildHoursCell(hours, isClosed, color),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHoursCell(String hours, bool isClosed, Color color) {
+    // Si contiene el separador "/", dividir en dos líneas
+    if (hours.contains('/')) {
+      final parts = hours.split('/').map((e) => e.trim()).toList();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children:
+            parts.map((part) {
+              return Text(
+                part,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: color.withOpacity(0.85),
+                  height: 1.4,
+                ),
+              );
+            }).toList(),
+      );
+    }
+
+    // Si no tiene separador, mostrar normalmente
+    return Text(
+      hours,
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: isClosed ? Colors.red.withOpacity(0.8) : color.withOpacity(0.85),
       ),
     );
   }
@@ -669,10 +1057,7 @@ class _ContactPageState extends State<ContactPage>
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.9),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withOpacity(0.1),
-          width: 1,
-        ),
+        border: Border.all(color: color.withOpacity(0.1), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -685,9 +1070,9 @@ class _ContactPageState extends State<ContactPage>
               Expanded(
                 child: Text(
                   info.type,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: color,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(color: color),
                 ),
               ),
             ],
@@ -696,16 +1081,17 @@ class _ContactPageState extends State<ContactPage>
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(Icons.location_on_rounded,
-                  size: 20,
-                  color: color),
+              Icon(Icons.location_on_rounded, size: 20, color: color),
               const SizedBox(width: 12),
               Expanded(
                 child: InkWell(
                   onTap: () => _openMap(info.mapUrl),
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -720,7 +1106,9 @@ class _ContactPageState extends State<ContactPage>
                         Flexible(
                           child: Text(
                             info.address,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: color,
                             ),
@@ -743,16 +1131,17 @@ class _ContactPageState extends State<ContactPage>
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(Icons.phone_rounded,
-                  size: 20,
-                  color: color),
+              Icon(Icons.phone_rounded, size: 20, color: color),
               const SizedBox(width: 12),
               Expanded(
                 child: InkWell(
                   onTap: () => _makePhoneCall(info.phone),
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -767,7 +1156,9 @@ class _ContactPageState extends State<ContactPage>
                         Flexible(
                           child: Text(
                             info.phone,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: color,
                             ),

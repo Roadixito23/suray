@@ -1160,6 +1160,16 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // Función para abrir Facebook
+  Future<void> _openFacebook() async {
+    final Uri url = Uri.parse(
+      'https://www.facebook.com/buses.suray.cargo',
+    );
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      debugPrint('No se pudo abrir la URL: $url');
+    }
+  }
+
   Widget _buildFooter() {
     return Container(
       width: double.infinity,
@@ -1176,7 +1186,7 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Sección de Instagram - píldora centrada arriba
+          // Sección de Redes Sociales - píldoras centradas arriba
           Padding(
             padding: const EdgeInsets.only(
               left: 20.0,
@@ -1184,53 +1194,98 @@ class _HomePageState extends State<HomePage> {
               top: 12.0,
               bottom: 8.0,
             ),
-            child: InkWell(
-              onTap: _openInstagram,
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.5),
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 12.0,
+              runSpacing: 8.0,
+              children: [
+                // Botón de Instagram
+                InkWell(
+                  onTap: _openInstagram,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Colors.black.withOpacity(0.1),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 22,
-                      height: 22,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.black.withOpacity(0.1),
+                        width: 1,
                       ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          'assets/insta_icon.png',
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
                           width: 22,
                           height: 22,
-                          fit: BoxFit.cover,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                          ),
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/insta_icon.png',
+                              width: 22,
+                              height: 22,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          '@buses.suray.cargo',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 6),
-                    const Text(
-                      '@buses.suray.cargo',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+                // Botón de Facebook
+                InkWell(
+                  onTap: _openFacebook,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.black.withOpacity(0.1),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.facebook,
+                          color: Color(0xFF1877F2),
+                          size: 22,
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'buses.suray.cargo',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 

@@ -1,3 +1,4 @@
 {
+    "dart.flutterSdkPath": "/home/road/fvm/versions/stable",
     "cmake.ignoreCMakeListsMissing": true
 }

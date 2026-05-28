@@ -18,8 +18,7 @@ dependencies:
   intl: ^0.19.0
   universal_html: ^2.2.4  # Para compatibilidad web/móvil
   url_launcher: ^6.3.1
-  flutter_map: ^8.2.2
-  latlong2: ^0.9.1
+  google_maps_flutter: ^2.9.0
   geolocator: ^13.0.2
 
 dev_dependencies:

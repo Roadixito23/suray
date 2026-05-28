@@ -825,7 +825,7 @@ class _ContactPageState extends State<ContactPage>
     // Horario específico para domingo según la ciudad
     String sundayHours =
         city == 'Coyhaique'
-            ? '10:00 - 15:30  /  18:00 - 19:15'
+            ? '10:00 - 15:30  /  18:00 - 19:30'
             : '08:00 - 13:30  /  16:30 - 18:00';
 
     return [

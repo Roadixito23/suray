@@ -678,14 +678,6 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-      // Banner de notificaciones flotante
-      floatingActionButton:
-          _showNotificationBanner
-              ? Container(
-                margin: const EdgeInsets.only(bottom: 20),
-                child: _buildNotificationBanner(),
-              )
-              : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }

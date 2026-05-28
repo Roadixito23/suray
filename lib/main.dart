@@ -1,11 +1,33 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 import 'splash.dart';
+
+/// Notificador global del modo oscuro. Todas las páginas deben escucharlo.
+final ValueNotifier<bool> darkModeNotifier = ValueNotifier<bool>(false);
+
+/// Clave usada en SharedPreferences.
+const _kDarkModeKey = 'dark_mode';
+
+/// Lee la preferencia guardada; si no existe usa dark en web, light en otras plataformas.
+Future<void> _initDarkMode() async {
+  final prefs = await SharedPreferences.getInstance();
+  final saved = prefs.getBool(_kDarkModeKey);
+  darkModeNotifier.value = saved ?? kIsWeb;
+}
+
+/// Persiste el estado actual del notificador.
+Future<void> saveDarkMode(bool value) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool(_kDarkModeKey, value);
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await _initDarkMode();
   runApp(const MyApp());
 }
 

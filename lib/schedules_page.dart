@@ -2,12 +2,60 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/rendering.dart';
 import 'dart:ui' as ui;
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:universal_html/html.dart' as html;
 import 'main.dart';
 import 'floating_notification.dart';
 
+// ─── Tema interno ─────────────────────────────────────────────────────────────
+class _ST {
+  final Color bg;
+  final Color cardBg;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color border;
+  final Color divider;
+  final Color chipBg;
+  final Color chipBorder;
+  final Color appBarBg;
+  const _ST({
+    required this.bg,
+    required this.cardBg,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.border,
+    required this.divider,
+    required this.chipBg,
+    required this.chipBorder,
+    required this.appBarBg,
+  });
+}
+
+// ─── Definición de sección ────────────────────────────────────────────────────
+class _SectionDef {
+  final String title;
+  final String collection;
+  final String tableType;
+  final IconData? icon;
+  final Widget? iconWidget;
+  final Color primaryColor;
+  final Color darkColor;
+  final Color? subtitleBg;
+  final Color? subtitleText;
+  const _SectionDef({
+    required this.title,
+    required this.collection,
+    required this.tableType,
+    this.icon,
+    this.iconWidget,
+    required this.primaryColor,
+    required this.darkColor,
+    this.subtitleBg,
+    this.subtitleText,
+  });
+}
+
+// ─── Widget principal ─────────────────────────────────────────────────────────
 class SchedulesPage extends StatefulWidget {
   final FirebaseFirestore firestore;
   final Map<String, Map<String, dynamic>> holidays;
@@ -29,36 +77,61 @@ class SchedulesPage extends StatefulWidget {
 }
 
 class _SchedulesPageState extends State<SchedulesPage> {
-  // Nivel de zoom (0.6 = 60%, 1.1 = 110%)
+  bool get _isDark => darkModeNotifier.value;
   double _zoomLevel = 1.0;
-  // Key para capturar screenshot
   final GlobalKey _screenshotKey = GlobalKey();
-  // Indica si estamos capturando screenshot (para desactivar destacados)
   bool _isCapturingScreenshot = false;
-  // Guardar zoom original para restaurar después de captura
   double _originalZoomLevel = 1.0;
+
+  void _onDarkModeChanged() => setState(() {});
 
   @override
   void initState() {
     super.initState();
+    darkModeNotifier.addListener(_onDarkModeChanged);
   }
 
-  // Método para capturar y descargar screenshot
+  @override
+  void dispose() {
+    darkModeNotifier.removeListener(_onDarkModeChanged);
+    super.dispose();
+  }
+
+  // ── Tema ────────────────────────────────────────────────────────────────────
+  _ST get _theme =>
+      _isDark
+          ? _ST(
+            bg: const Color(0xFF0A1628),
+            cardBg: const Color(0xFF112240),
+            textPrimary: Colors.white,
+            textSecondary: const Color(0xFF8899AA),
+            border: Colors.white.withOpacity(0.1),
+            divider: Colors.white.withOpacity(0.12),
+            chipBg: const Color(0xFF1A2F4A),
+            chipBorder: Colors.white.withOpacity(0.18),
+            appBarBg: const Color(0xFF0A1628),
+          )
+          : _ST(
+            bg: MyApp.lightGreyBackground,
+            cardBg: MyApp.surfaceWhite,
+            textPrimary: MyApp.darkTextColor,
+            textSecondary: MyApp.lightTextColor,
+            border: MyApp.borderColor.withOpacity(0.5),
+            divider: MyApp.borderColor,
+            chipBg: MyApp.surfaceWhite,
+            chipBorder: MyApp.borderColor,
+            appBarBg: MyApp.primaryNavy,
+          );
+
+  // ── Screenshot ───────────────────────────────────────────────────────────────
   Future<void> _captureAndDownloadScreenshot() async {
     try {
-      // Guardar zoom actual y resetear a 1.0 para captura limpia
       _originalZoomLevel = _zoomLevel;
-
-      // Desactivar destacados y resetear zoom antes de capturar
       setState(() {
         _isCapturingScreenshot = true;
         _zoomLevel = 1.0;
       });
-
-      // Esperar suficiente tiempo para que se actualice la UI y se carguen todos los datos
       await Future.delayed(const Duration(milliseconds: 500));
-
-      // Mostrar indicador de carga
       if (!mounted) return;
       FloatingNotification.show(
         context,
@@ -66,42 +139,28 @@ class _SchedulesPageState extends State<SchedulesPage> {
         type: NotificationType.info,
         duration: const Duration(seconds: 2),
       );
-
-      // Esperar un poco más para asegurar que el snackbar se muestre
       await Future.delayed(const Duration(milliseconds: 300));
-
-      // Obtener el RenderRepaintBoundary
-      RenderRepaintBoundary boundary =
+      final boundary =
           _screenshotKey.currentContext!.findRenderObject()
               as RenderRepaintBoundary;
-
-      // Capturar la imagen con buena calidad
-      ui.Image image = await boundary.toImage(pixelRatio: 2.0);
-      ByteData? byteData = await image.toByteData(
-        format: ui.ImageByteFormat.png,
-      );
-      Uint8List pngBytes = byteData!.buffer.asUint8List();
-
-      // Crear nombre de archivo con fecha y hora
+      final image = await boundary.toImage(pixelRatio: 2.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final pngBytes = byteData!.buffer.asUint8List();
       final now = DateTime.now();
       final fileName =
           'horarios_suray_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}.png';
-
       if (kIsWeb) {
-        // Descargar en web
         final blob = html.Blob([pngBytes]);
         final url = html.Url.createObjectUrlFromBlob(blob);
-        final anchor =
-            html.AnchorElement(href: url)
-              ..setAttribute('download', fileName)
-              ..click();
+        html.AnchorElement(href: url)
+          ..setAttribute('download', fileName)
+          ..click();
         html.Url.revokeObjectUrl(url);
       }
-
       if (!mounted) return;
       FloatingNotification.show(
         context,
-        message: 'Imagen guardada exitosamente: $fileName',
+        message: 'Imagen guardada: $fileName',
         type: NotificationType.success,
         duration: const Duration(seconds: 3),
       );
@@ -114,7 +173,6 @@ class _SchedulesPageState extends State<SchedulesPage> {
         duration: const Duration(seconds: 3),
       );
     } finally {
-      // Reactivar destacados y restaurar zoom después de capturar
       if (mounted) {
         setState(() {
           _isCapturingScreenshot = false;
@@ -124,308 +182,126 @@ class _SchedulesPageState extends State<SchedulesPage> {
     }
   }
 
-  // --- STREAMS HELPER ---
+  // ── Streams ──────────────────────────────────────────────────────────────────
   Stream<List<String>> _timesStream(String region, String dayType) {
-    // Caso especial: Sin servicio
-    if (dayType == 'sinServicio') {
-      return Stream.value([]);
-    }
-
-    // Caso especial: Horarios especiales de feriado
+    if (dayType == 'sinServicio') return Stream.value([]);
     if (dayType.startsWith('feriadoEspecial_')) {
       final parts = dayType.split('_');
-      final year = parts[1];
-      final feriadoKey = parts[2];
-
       return widget.firestore
           .collection('horarios_especiales_feriados')
-          .doc(year)
+          .doc(parts[1])
           .collection(region)
-          .where('feriado', isEqualTo: feriadoKey)
+          .where('feriado', isEqualTo: parts[2])
           .orderBy('time')
           .snapshots()
-          .map(
-            (snapshot) =>
-                snapshot.docs
-                    .map((doc) => doc.data()['time'] as String)
-                    .toList(),
-          );
+          .map((s) => s.docs.map((d) => d.data()['time'] as String).toList());
     }
-
-    // Caso normal: Horarios regulares
     return widget.firestore
         .collection('horarios')
         .doc(region)
         .collection(dayType)
         .orderBy('time')
         .snapshots()
-        .map(
-          (snapshot) =>
-              snapshot.docs.map((doc) => doc.data()['time'] as String).toList(),
-        );
+        .map((s) => s.docs.map((d) => d.data()['time'] as String).toList());
   }
 
-  // --- MÉTODOS HELPER (sin cambios) ---
-  bool _isDateHoliday(DateTime date) {
-    final dateKey =
-        "${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-    return widget.holidays.containsKey(dateKey) &&
-        widget.holidays[dateKey]!['activo'] == true;
-  }
-
+  // ── Helpers ──────────────────────────────────────────────────────────────────
   String _getDayCollection(DateTime date) {
-    final dateKey =
-        "${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-
-    // Verificar si es feriado
-    if (widget.holidays.containsKey(dateKey) &&
-        widget.holidays[dateKey]!['activo'] == true) {
-      final tipoHorario = widget.holidays[dateKey]!['tipoHorario'] ?? 'domingo';
-
-      switch (tipoHorario) {
+    final key =
+        '${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    if (widget.holidays.containsKey(key) &&
+        widget.holidays[key]!['activo'] == true) {
+      switch (widget.holidays[key]!['tipoHorario'] ?? 'domingo') {
         case 'especial':
-          return 'feriadoEspecial_${date.year}_$dateKey';
+          return 'feriadoEspecial_${date.year}_$key';
         case 'sinServicio':
           return 'sinServicio';
-        case 'domingo':
         default:
           return 'domingosFeriados';
       }
     }
-
     if (date.weekday >= 1 && date.weekday <= 5) return 'lunesViernes';
     if (date.weekday == 6) return 'sabados';
     return 'domingosFeriados';
   }
 
-  String _getTableIdentifier(String collection) {
-    return {
-          'lunesViernes': 'weekdays',
-          'sabados': 'saturday',
-          'domingosFeriados': 'sunday_holidays',
-        }[collection] ??
-        'unknown';
-  }
+  String _getTableIdentifier(String col) =>
+      {
+        'lunesViernes': 'weekdays',
+        'sabados': 'saturday',
+        'domingosFeriados': 'sunday_holidays',
+      }[col] ??
+      'unknown';
 
   bool _shouldHighlightInThisTable(String tableType, String nextDeparture) {
     if (nextDeparture.toLowerCase().contains('mañana')) {
-      final tomorrow = DateTime.now().add(const Duration(days: 1));
-      return tableType == _getTableIdentifier(_getDayCollection(tomorrow));
+      return tableType ==
+          _getTableIdentifier(
+            _getDayCollection(DateTime.now().add(const Duration(days: 1))),
+          );
     }
     return tableType == _getTableIdentifier(widget.currentDayCollection ?? '');
   }
 
+  // ── Build ────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    // Valores uniformes para todos los dispositivos
-    final double baseFontSize = 14.0;
-    final double chipPadding = 16.0;
+    final t = _theme;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    const double fontSize = 14.0;
+    const double chipPad = 14.0;
+
+    final sections = [
+      _SectionDef(
+        title: 'Lunes a Viernes',
+        collection: 'lunesViernes',
+        tableType: 'weekdays',
+        icon: Icons.work_rounded,
+        primaryColor: MyApp.weekdayMint,
+        darkColor: MyApp.weekdayMintDark,
+        subtitleBg: const Color(0xFFB2EBF2),
+        subtitleText: const Color(0xFF00695C),
+      ),
+      _SectionDef(
+        title: 'Sábados',
+        collection: 'sabados',
+        tableType: 'saturday',
+        iconWidget: _buildSaturdayIcon(),
+        primaryColor: MyApp.saturdayOrange,
+        darkColor: MyApp.saturdayOrangeDark,
+        subtitleBg: const Color(0xFFFFF9C4),
+        subtitleText: const Color(0xFFF57F17),
+      ),
+      _SectionDef(
+        title: 'Domingo o Feriado',
+        collection: 'domingosFeriados',
+        tableType: 'sunday_holidays',
+        icon: Icons.weekend,
+        primaryColor: MyApp.sundayRed,
+        darkColor: MyApp.sundayRedDark,
+        subtitleBg: const Color(0xFFFFCDD2),
+        subtitleText: const Color(0xFFC62828),
+      ),
+    ];
 
     return Scaffold(
-      backgroundColor: MyApp.lightGreyBackground,
-      appBar: AppBar(
-        backgroundColor: MyApp.primaryNavy,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          // Botón de descarga
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            child: IconButton(
-              icon: const Icon(Icons.download, color: Colors.white),
-              tooltip: 'Descargar horarios como imagen',
-              onPressed: _captureAndDownloadScreenshot,
-              iconSize: 24,
-            ),
-          ),
-          // Controles de zoom en el lado derecho
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Botón zoom out
-                IconButton(
-                  icon: const Icon(Icons.zoom_out, size: 18),
-                  color: MyApp.primaryNavy,
-                  onPressed:
-                      _zoomLevel > 0.6
-                          ? () {
-                            setState(() {
-                              _zoomLevel = (_zoomLevel - 0.1).clamp(0.6, 1.1);
-                            });
-                          }
-                          : null,
-                  tooltip: 'Alejar',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 32,
-                  ),
-                ),
-                // Indicador de zoom
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF8E1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${(_zoomLevel * 100).round()}%',
-                    style: TextStyle(
-                      color: MyApp.primaryNavy,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-                // Botón zoom in
-                IconButton(
-                  icon: const Icon(Icons.zoom_in, size: 18),
-                  color: MyApp.primaryNavy,
-                  onPressed:
-                      _zoomLevel < 1.1
-                          ? () {
-                            setState(() {
-                              _zoomLevel = (_zoomLevel + 0.1).clamp(0.6, 1.1);
-                            });
-                          }
-                          : null,
-                  tooltip: 'Acercar',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 32,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+      backgroundColor: t.bg,
+      appBar: _buildAppBar(t),
       body: SelectionArea(
         child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                MyApp.primaryNavy.withOpacity(0.05),
-                MyApp.lightGreyBackground,
-                MyApp.surfaceWhite,
-              ],
-              stops: const [0.0, 0.3, 1.0],
-            ),
-          ),
+          color: t.bg,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16),
             child: RepaintBoundary(
               key: _screenshotKey,
               child: Transform.scale(
                 scale: _zoomLevel,
-                child: Column(
-                  children: [
-                    // Sección Lunes a Viernes
-                    _buildDaySection(
-                      'Lunes a Viernes',
-                      'lunesViernes',
-                      'weekdays',
-                      Icons.work_rounded,
-                      primaryColor: MyApp.weekdayMint,
-                      darkColor: MyApp.weekdayMintDark,
-                      fontSize: baseFontSize,
-                      chipPadding: chipPadding,
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Sección Sábados
-                    _buildDaySectionWithCustomIcon(
-                      'Sábados',
-                      'sabados',
-                      'saturday',
-                      _buildSaturdayIcon(),
-                      primaryColor: MyApp.saturdayOrange,
-                      darkColor: MyApp.saturdayOrangeDark,
-                      fontSize: baseFontSize,
-                      chipPadding: chipPadding,
-                      subtitleBackgroundColor: const Color(0xFFFFF9C4), // Amarillo pastel claro
-                      subtitleTextColor: const Color(0xFFF57F17), // Amarillo oscuro para contraste
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Sección Domingo o Feriado
-                    _buildDaySection(
-                      'Domingo o Feriado',
-                      'domingosFeriados',
-                      'sunday_holidays',
-                      Icons.weekend,
-                      primaryColor: MyApp.sundayRed,
-                      darkColor: MyApp.sundayRedDark,
-                      fontSize: baseFontSize,
-                      chipPadding: chipPadding,
-                      subtitleBackgroundColor: const Color(0xFFFFCDD2), // Rojo pastel claro
-                      subtitleTextColor: const Color(0xFFC62828), // Rojo oscuro para contraste
-                    ),
-
-                    // Logo y fecha (solo visible durante captura)
-                    if (_isCapturingScreenshot) ...[
-                      const SizedBox(height: 32),
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: MyApp.surfaceWhite,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: MyApp.borderColor.withOpacity(0.5),
-                            width: 1,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            // Logo centrado
-                            Image.asset(
-                              'assets/logo.png',
-                              height: 80,
-                              fit: BoxFit.contain,
-                            ),
-                            const SizedBox(height: 16),
-                            // Fecha y hora
-                            Text(
-                              'Fecha: ${DateTime.now().day.toString().padLeft(2, '0')}/${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().year}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: MyApp.darkTextColor,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Hora: ${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: MyApp.darkTextColor,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+                alignment: Alignment.topCenter,
+                child:
+                    isLandscape
+                        ? _buildLandscapeLayout(sections, t, fontSize, chipPad)
+                        : _buildPortraitLayout(sections, t, fontSize, chipPad),
               ),
             ),
           ),
@@ -434,68 +310,160 @@ class _SchedulesPageState extends State<SchedulesPage> {
     );
   }
 
-  // Widget personalizado para el ícono de sábado (maletín + sofá)
-  Widget _buildSaturdayIcon() {
-    return SizedBox(
-      width: 24,
-      height: 24,
-      child: Stack(
-        children: [
-          // Parte superior izquierda: maletín recortado
-          ClipPath(
-            clipper: _UpperLeftClipper(),
-            child: const Icon(Icons.work, color: Colors.white, size: 24),
-          ),
-          // Parte inferior derecha: sofá recortado
-          ClipPath(
-            clipper: _LowerRightClipper(),
-            child: const Icon(Icons.weekend, color: Colors.white, size: 24),
-          ),
-          // Línea diagonal
-          CustomPaint(
-            painter: _DiagonalDividerPainter(MyApp.saturdayOrange),
-            size: const Size(24, 24),
-          ),
-        ],
+  // ── AppBar ───────────────────────────────────────────────────────────────────
+  AppBar _buildAppBar(_ST t) {
+    return AppBar(
+      backgroundColor: t.appBarBg,
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
       ),
+      title: const Text(
+        'Horarios',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
+        ),
+      ),
+      actions: [
+        // Toggle modo claro/oscuro
+        Tooltip(
+          message: _isDark ? 'Modo claro' : 'Modo oscuro',
+          child: IconButton(
+            icon: Icon(
+              _isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+              color: Colors.white,
+            ),
+            onPressed: () {
+              final newVal = !darkModeNotifier.value;
+              darkModeNotifier.value = newVal;
+              saveDarkMode(newVal);
+            },
+          ),
+        ),
+        // Descargar imagen
+        IconButton(
+          icon: const Icon(Icons.download_rounded, color: Colors.white),
+          tooltip: 'Descargar como imagen',
+          onPressed: _captureAndDownloadScreenshot,
+        ),
+        // Zoom
+        Container(
+          margin: const EdgeInsets.only(right: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white30),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _zoomBtn(Icons.remove, _zoomLevel > 0.6, () {
+                setState(() => _zoomLevel = (_zoomLevel - 0.1).clamp(0.6, 1.5));
+              }),
+              Text(
+                '${(_zoomLevel * 100).round()}%',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+              _zoomBtn(Icons.add, _zoomLevel < 1.5, () {
+                setState(() => _zoomLevel = (_zoomLevel + 0.1).clamp(0.6, 1.5));
+              }),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
-  // Método para construir sección con ícono personalizado
-  Widget _buildDaySectionWithCustomIcon(
-    String dayTitle,
-    String dayCollection,
-    String tableType,
-    Widget iconWidget, {
-    required Color primaryColor,
-    required Color darkColor,
-    double fontSize = 14.0,
-    double chipPadding = 16.0,
-    Color? subtitleBackgroundColor,
-    Color? subtitleTextColor,
-  }) {
+  Widget _zoomBtn(IconData icon, bool enabled, VoidCallback fn) =>
+      GestureDetector(
+        onTap: enabled ? fn : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 5),
+          child: Icon(
+            icon,
+            color: enabled ? Colors.white : Colors.white38,
+            size: 18,
+          ),
+        ),
+      );
+
+  // ── Portrait: tarjetas apiladas ──────────────────────────────────────────────
+  Widget _buildPortraitLayout(
+    List<_SectionDef> sections,
+    _ST t,
+    double fontSize,
+    double chipPad,
+  ) {
+    return Column(
+      children: [
+        for (int i = 0; i < sections.length; i++) ...[
+          if (i > 0) const SizedBox(height: 20),
+          _buildDayCard(sections[i], t, fontSize, chipPad, false),
+        ],
+        if (_isCapturingScreenshot) _buildCaptureFooter(t),
+      ],
+    );
+  }
+
+  // ── Landscape: 3 tarjetas en fila ────────────────────────────────────────────
+  Widget _buildLandscapeLayout(
+    List<_SectionDef> sections,
+    _ST t,
+    double fontSize,
+    double chipPad,
+  ) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (int i = 0; i < sections.length; i++) ...[
+          if (i > 0) const SizedBox(width: 14),
+          Expanded(
+            child: _buildDayCard(sections[i], t, fontSize, chipPad, true),
+          ),
+        ],
+      ],
+    );
+  }
+
+  // ── Tarjeta por tipo de día ───────────────────────────────────────────────────
+  Widget _buildDayCard(
+    _SectionDef s,
+    _ST t,
+    double fontSize,
+    double chipPad,
+    bool isLandscape,
+  ) {
     return Container(
       decoration: BoxDecoration(
-        color: MyApp.surfaceWhite,
+        color: t.cardBg,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: MyApp.primaryNavy.withOpacity(0.1),
+            color: Colors.black.withOpacity(_isDark ? 0.35 : 0.08),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(color: MyApp.borderColor.withOpacity(0.5), width: 1),
+        border: Border.all(color: t.border, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Encabezado común para el tipo de día
+          // Encabezado coloreado
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [primaryColor, darkColor],
+                colors: [s.primaryColor, s.darkColor],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
               ),
@@ -507,76 +475,88 @@ class _SchedulesPageState extends State<SchedulesPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Título con ícono (centrado)
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(7),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: iconWidget,
+                  child:
+                      s.iconWidget ??
+                      Icon(s.icon!, color: Colors.white, size: 22),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  dayTitle,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    s.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.3,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
           ),
 
-          // Subtítulo "Salidas desde:"
+          // Fila "Salidas desde:"
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 24),
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 20),
             decoration: BoxDecoration(
-              color: subtitleBackgroundColor ?? const Color(0xFFB2EBF2), // Cyan pastel por defecto
+              color:
+                  _isDark
+                      ? Colors.white.withOpacity(0.06)
+                      : (s.subtitleBg ?? const Color(0xFFB2EBF2)),
             ),
             child: Text(
               'Salidas desde:',
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: subtitleTextColor ?? const Color(0xFF00695C), // Verde azulado oscuro para contraste
+                color:
+                    _isDark
+                        ? Colors.white70
+                        : (s.subtitleText ?? const Color(0xFF00695C)),
               ),
               textAlign: TextAlign.center,
             ),
           ),
 
-          // Dos columnas: Aysén (izquierda) y Coyhaique (derecha)
+          // Dos columnas: Aysén | Coyhaique
           IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Columna Puerto Aysén
                 Expanded(
-                  child: _buildCityScheduleColumn(
+                  child: _buildCityCol(
                     'Puerto Aysén',
                     'aysen',
-                    dayCollection,
-                    tableType,
+                    s.collection,
+                    s.tableType,
                     MyApp.primaryNavy,
                     Icons.location_on_rounded,
-                    fontSize: fontSize,
-                    chipPadding: chipPadding,
+                    t,
+                    fontSize,
+                    chipPad,
+                    isLandscape,
                   ),
                 ),
-                // Separador vertical
-                Container(width: 2, color: MyApp.borderColor),
-                // Columna Coyhaique
+                Container(width: 1, color: t.divider),
                 Expanded(
-                  child: _buildCityScheduleColumn(
+                  child: _buildCityCol(
                     'Coyhaique',
                     'coyhaique',
-                    dayCollection,
-                    tableType,
+                    s.collection,
+                    s.tableType,
                     MyApp.accentBlue,
                     Icons.location_city_rounded,
-                    fontSize: fontSize,
-                    chipPadding: chipPadding,
+                    t,
+                    fontSize,
+                    chipPad,
+                    isLandscape,
                   ),
                 ),
               ],
@@ -587,286 +567,179 @@ class _SchedulesPageState extends State<SchedulesPage> {
     );
   }
 
-  // Nuevo método para construir sección por día con dos ciudades lado a lado
-  Widget _buildDaySection(
-    String dayTitle,
-    String dayCollection,
-    String tableType,
-    IconData icon, {
-    required Color primaryColor,
-    required Color darkColor,
-    double fontSize = 14.0,
-    double chipPadding = 16.0,
-    Color? subtitleBackgroundColor,
-    Color? subtitleTextColor,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: MyApp.surfaceWhite,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: MyApp.primaryNavy.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: MyApp.borderColor.withOpacity(0.5), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Encabezado común para el tipo de día
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [primaryColor, darkColor],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Título con ícono (centrado)
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, color: Colors.white, size: 24),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  dayTitle,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Subtítulo "Salidas desde:"
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 24),
-            decoration: BoxDecoration(
-              color: subtitleBackgroundColor ?? const Color(0xFFB2EBF2), // Cyan pastel por defecto
-            ),
-            child: Text(
-              'Salidas desde:',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: subtitleTextColor ?? const Color(0xFF00695C), // Verde azulado oscuro para contraste
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-
-          // Dos columnas: Aysén (izquierda) y Coyhaique (derecha)
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Columna Puerto Aysén
-                Expanded(
-                  child: _buildCityScheduleColumn(
-                    'Puerto Aysén',
-                    'aysen',
-                    dayCollection,
-                    tableType,
-                    MyApp.primaryNavy,
-                    Icons.location_on_rounded,
-                    fontSize: fontSize,
-                    chipPadding: chipPadding,
-                  ),
-                ),
-                // Separador vertical
-                Container(width: 2, color: MyApp.borderColor),
-                // Columna Coyhaique
-                Expanded(
-                  child: _buildCityScheduleColumn(
-                    'Coyhaique',
-                    'coyhaique',
-                    dayCollection,
-                    tableType,
-                    MyApp.accentBlue,
-                    Icons.location_city_rounded,
-                    fontSize: fontSize,
-                    chipPadding: chipPadding,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Nueva columna individual de ciudad con sus horarios
-  Widget _buildCityScheduleColumn(
+  // ── Columna de ciudad ────────────────────────────────────────────────────────
+  Widget _buildCityCol(
     String cityName,
     String region,
     String dayCollection,
     String tableType,
     Color accentColor,
-    IconData icon, {
-    double fontSize = 14.0,
-    double chipPadding = 16.0,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
+    IconData icon,
+    _ST t,
+    double fontSize,
+    double chipPad,
+    bool isLandscape,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Nombre de la ciudad
-          Text(
-            cityName,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: fontSize + 4,
-              color: accentColor,
-            ),
-            textAlign: TextAlign.center,
+          // Nombre ciudad
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(_isDark ? 0.25 : 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(
+                  icon,
+                  color: _isDark ? Colors.white : accentColor,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  cityName,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: fontSize + 2,
+                    color: _isDark ? Colors.white : accentColor,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
-          // Indicador de horario especial
+          // Badge feriado especial
           if (dayCollection.startsWith('feriadoEspecial_'))
             Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: Colors.purple.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.purple, width: 1.5),
+                color: Colors.purple.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.purple.withOpacity(0.6)),
               ),
-              child: Row(
+              child: const Row(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.star, size: 16, color: Colors.purple),
-                  SizedBox(width: 6),
+                children: [
+                  Icon(Icons.star, size: 13, color: Colors.purple),
+                  SizedBox(width: 4),
                   Text(
                     'HORARIO ESPECIAL',
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 10,
                       fontWeight: FontWeight.bold,
                       color: Colors.purple,
-                      letterSpacing: 0.5,
+                      letterSpacing: 0.4,
                     ),
                   ),
                 ],
               ),
             ),
 
-          // StreamBuilder para los horarios
+          // Horarios
           StreamBuilder<List<String>>(
             stream: _timesStream(region, dayCollection),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
                 return Padding(
-                  padding: const EdgeInsets.all(20.0),
+                  padding: const EdgeInsets.all(20),
                   child: CircularProgressIndicator(
                     color: accentColor,
                     strokeWidth: 3,
                   ),
                 );
               }
-              if (snapshot.hasError) {
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: MyApp.errorColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: MyApp.errorColor.withOpacity(0.3),
-                    ),
-                  ),
-                  child: Text(
-                    'Error: ${snapshot.error}',
-                    style: TextStyle(
-                      color: MyApp.errorColor,
-                      fontSize: fontSize,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+              if (snap.hasError) {
+                return Text(
+                  'Error al cargar',
+                  style: TextStyle(color: MyApp.errorColor, fontSize: fontSize),
+                  textAlign: TextAlign.center,
                 );
               }
-              final times = snapshot.data;
+              final times = snap.data;
               if (times == null || times.isEmpty) {
-                // Verificar si es un día sin servicio
                 if (dayCollection == 'sinServicio') {
-                  return Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.cancel_outlined,
-                          size: 64,
-                          color: Colors.red.withOpacity(0.6),
+                  return Column(
+                    children: [
+                      Icon(
+                        Icons.do_not_disturb_on_rounded,
+                        size: 48,
+                        color: Colors.red.withOpacity(0.5),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Sin servicio\npor feriado',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red[700],
                         ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Sin servicio por feriado',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red[700],
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   );
                 }
-
-                // Mensaje normal de "No hay horarios"
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: MyApp.lightTextColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+                return Text(
+                  'Sin horarios',
+                  style: TextStyle(
+                    fontSize: fontSize,
+                    color: t.textSecondary,
+                    fontStyle: FontStyle.italic,
                   ),
-                  child: Text(
-                    'No hay horarios disponibles.',
-                    style: TextStyle(
-                      fontSize: fontSize,
-                      color: MyApp.lightTextColor,
-                      fontStyle: FontStyle.italic,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+                  textAlign: TextAlign.center,
                 );
               }
-
-              return Wrap(
-                spacing: 8.0,
-                runSpacing: 8.0,
-                alignment: WrapAlignment.center,
-                children:
-                    times
-                        .map(
-                          (time) => _buildTimeChip(
-                            time,
-                            region,
-                            tableType,
-                            times,
-                            fontSize: fontSize,
-                            chipPadding: chipPadding,
-                          ),
-                        )
-                        .toList(),
-              );
+              return isLandscape
+                  ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children:
+                        times
+                            .map(
+                              (time) => Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 3,
+                                ),
+                                child: _buildTimeChip(
+                                  time,
+                                  region,
+                                  tableType,
+                                  times,
+                                  t: t,
+                                  fontSize: fontSize,
+                                  chipPad: chipPad,
+                                ),
+                              ),
+                            )
+                            .toList(),
+                  )
+                  : Wrap(
+                    spacing: 7,
+                    runSpacing: 7,
+                    alignment: WrapAlignment.center,
+                    children:
+                        times
+                            .map(
+                              (time) => _buildTimeChip(
+                                time,
+                                region,
+                                tableType,
+                                times,
+                                t: t,
+                                fontSize: fontSize,
+                                chipPad: chipPad,
+                              ),
+                            )
+                            .toList(),
+                  );
             },
           ),
         ],
@@ -874,72 +747,59 @@ class _SchedulesPageState extends State<SchedulesPage> {
     );
   }
 
+  // ── Chip de horario ──────────────────────────────────────────────────────────
   Widget _buildTimeChip(
     String time,
     String region,
     String tableType,
     List<String> allTimes, {
+    required _ST t,
     double fontSize = 14.0,
-    double chipPadding = 16.0,
+    double chipPad = 14.0,
   }) {
-    String? nextDeparture =
+    final nextDep =
         region == 'aysen'
             ? widget.nextAysenDeparture
             : widget.nextCoyhaiqueDeparture;
-    // Desactivar destacados si estamos capturando screenshot
     final isNext =
         !_isCapturingScreenshot &&
-        nextDeparture != null &&
-        nextDeparture.contains(time) &&
-        _shouldHighlightInThisTable(tableType, nextDeparture);
-
-    // Verificar si es la primera o última salida del día
-    final isFirstOfDay = allTimes.isNotEmpty && time == allTimes.first;
-    final isLastOfDay = allTimes.isNotEmpty && time == allTimes.last;
+        nextDep != null &&
+        nextDep.contains(time) &&
+        _shouldHighlightInThisTable(tableType, nextDep);
+    final isFirst = allTimes.isNotEmpty && time == allTimes.first;
+    final isLast = allTimes.isNotEmpty && time == allTimes.last;
 
     if (isNext) {
-      // Chip destacado para la próxima salida
-      // Determinar el estilo según si es primera, última o salida normal
-      Color primaryColor;
-      Color secondaryColor;
-      IconData icon;
-      Color shadowColor;
-
-      if (isFirstOfDay) {
-        // Primera salida del día: amarillo con sol
-        primaryColor = MyApp.saturdayOrange;
-        secondaryColor = MyApp.saturdayOrangeDark;
-        icon = Icons.wb_sunny;
-        shadowColor = MyApp.saturdayOrange;
-      } else if (isLastOfDay) {
-        // Última salida del día: azul petróleo con luna
-        primaryColor = MyApp.primaryNavy;
-        secondaryColor = MyApp.lightNavy;
-        icon = Icons.nightlight_round;
-        shadowColor = MyApp.primaryNavy;
+      final Color c1, c2;
+      final IconData ic;
+      if (isFirst) {
+        c1 = MyApp.saturdayOrange;
+        c2 = MyApp.saturdayOrangeDark;
+        ic = Icons.wb_sunny;
+      } else if (isLast) {
+        c1 = MyApp.primaryNavy;
+        c2 = MyApp.lightNavy;
+        ic = Icons.nightlight_round;
       } else {
-        // Salida normal: naranja con bus
-        primaryColor = MyApp.primaryOrange;
-        secondaryColor = MyApp.deepOrange;
-        icon = Icons.directions_bus;
-        shadowColor = MyApp.primaryOrange;
+        c1 = MyApp.primaryOrange;
+        c2 = MyApp.deepOrange;
+        ic = Icons.directions_bus;
       }
-
       return Container(
         padding: EdgeInsets.symmetric(
-          horizontal: chipPadding,
-          vertical: chipPadding * 0.75,
+          horizontal: chipPad,
+          vertical: chipPad * 0.65,
         ),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [primaryColor, secondaryColor],
+            colors: [c1, c2],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(25),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: shadowColor.withOpacity(0.4),
+              color: c1.withOpacity(0.4),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -951,107 +811,150 @@ class _SchedulesPageState extends State<SchedulesPage> {
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(12),
+                color: Colors.white.withOpacity(0.25),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: Colors.white, size: fontSize + 2),
+              child: Icon(ic, color: Colors.white, size: fontSize + 1),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 7),
             Text(
               time,
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
-                fontSize: fontSize + 1,
+                fontSize: fontSize,
               ),
             ),
           ],
         ),
       );
-    } else {
-      // Chip normal para los demás horarios
-      return Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: chipPadding,
-          vertical: chipPadding * 0.75,
+    }
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: chipPad,
+        vertical: chipPad * 0.65,
+      ),
+      decoration: BoxDecoration(
+        color: t.chipBg,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: t.chipBorder, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(_isDark ? 0.2 : 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Text(
+        time,
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: t.textPrimary,
+          fontSize: fontSize,
         ),
+      ),
+    );
+  }
+
+  // ── Ícono sábado ─────────────────────────────────────────────────────────────
+  Widget _buildSaturdayIcon() {
+    return SizedBox(
+      width: 22,
+      height: 22,
+      child: Stack(
+        children: [
+          ClipPath(
+            clipper: _UpperLeftClipper(),
+            child: const Icon(Icons.work, color: Colors.white, size: 22),
+          ),
+          ClipPath(
+            clipper: _LowerRightClipper(),
+            child: const Icon(Icons.weekend, color: Colors.white, size: 22),
+          ),
+          CustomPaint(
+            painter: _DiagonalDividerPainter(MyApp.saturdayOrange),
+            size: const Size(22, 22),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Footer al capturar ────────────────────────────────────────────────────────
+  Widget _buildCaptureFooter(_ST t) {
+    final now = DateTime.now();
+    return Padding(
+      padding: const EdgeInsets.only(top: 28),
+      child: Container(
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: MyApp.surfaceWhite,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: MyApp.borderColor, width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: MyApp.primaryNavy.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
+          color: t.cardBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: t.border),
+        ),
+        child: Column(
+          children: [
+            Image.asset('assets/logo.png', height: 72, fit: BoxFit.contain),
+            const SizedBox(height: 14),
+            Text(
+              '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}  •  '
+              '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
+              style: TextStyle(
+                fontSize: 13,
+                color: t.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
-        child: Text(
-          time,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: MyApp.darkTextColor,
-            fontSize: fontSize,
-          ),
-        ),
-      );
-    }
+      ),
+    );
   }
 }
 
-// CustomPainter para dibujar la línea diagonal
+// ─── Painters / Clippers ─────────────────────────────────────────────────────
 class _DiagonalDividerPainter extends CustomPainter {
   final Color color;
-
   _DiagonalDividerPainter(this.color);
-
   @override
   void paint(Canvas canvas, Size size) {
-    final paint =
-        Paint()
-          ..color = color
-          ..strokeWidth = 1.5
-          ..style = PaintingStyle.stroke;
-
-    // Línea diagonal de arriba-derecha a abajo-izquierda
-    canvas.drawLine(Offset(size.width, 0), Offset(0, size.height), paint);
+    canvas.drawLine(
+      Offset(size.width, 0),
+      Offset(0, size.height),
+      Paint()
+        ..color = color
+        ..strokeWidth = 1.5
+        ..style = PaintingStyle.stroke,
+    );
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CustomPainter _) => false;
 }
 
-// Clipper para la parte superior izquierda (triángulo)
 class _UpperLeftClipper extends CustomClipper<Path> {
   @override
-  Path getClip(Size size) {
-    final path =
-        Path()
-          ..moveTo(0, 0)
-          ..lineTo(size.width, 0)
-          ..lineTo(0, size.height)
-          ..close();
-    return path;
-  }
-
+  Path getClip(Size size) =>
+      Path()
+        ..moveTo(0, 0)
+        ..lineTo(size.width, 0)
+        ..lineTo(0, size.height)
+        ..close();
   @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+  bool shouldReclip(covariant CustomClipper<Path> _) => false;
 }
 
-// Clipper para la parte inferior derecha (triángulo)
 class _LowerRightClipper extends CustomClipper<Path> {
   @override
-  Path getClip(Size size) {
-    final path =
-        Path()
-          ..moveTo(size.width, 0)
-          ..lineTo(size.width, size.height)
-          ..lineTo(0, size.height)
-          ..close();
-    return path;
-  }
-
+  Path getClip(Size size) =>
+      Path()
+        ..moveTo(size.width, 0)
+        ..lineTo(size.width, size.height)
+        ..lineTo(0, size.height)
+        ..close();
   @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+  bool shouldReclip(covariant CustomClipper<Path> _) => false;
 }

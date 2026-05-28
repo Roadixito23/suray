@@ -8,8 +8,6 @@ import 'schedules_page.dart';
 import 'paraderos_page.dart';
 import 'main.dart';
 import 'dual_weather_service.dart';
-import 'services/notification_service.dart';
-import 'floating_notification.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,7 +16,7 @@ class HomePage extends StatefulWidget {
   _HomePageState createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   late final FirebaseFirestore _firestore;
   final List<StreamSubscription> _streamSubscriptions = [];
   List<String> _aysenTodayTimes = [];
@@ -47,10 +45,11 @@ class _HomePageState extends State<HomePage> {
   Timer? _imageRotationTimer;
   int _currentPage = 0;
 
+  // Animación pulso del botón horarios
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulseAnim;
+
   // Notificaciones
-  final NotificationService _notificationService = NotificationService();
-  bool _showNotificationBanner = true;
-  bool _notificationsEnabled = false;
 
   @override
   void initState() {
@@ -72,6 +71,16 @@ class _HomePageState extends State<HomePage> {
     _pageController = PageController(initialPage: 0);
     _startImageRotation();
 
+    // Animación pulso botón horarios
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _pulseAnim = Tween<double>(begin: 1.0, end: 1.04).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+    _pulseController.repeat(reverse: true);
+
     _pageController.addListener(() {
       if (_pageController.page?.round() != _currentPage) {
         setState(() {
@@ -79,21 +88,6 @@ class _HomePageState extends State<HomePage> {
         });
       }
     });
-
-    // Inicializar notificaciones y mostrar banner después de 3 segundos
-    _initializeNotifications();
-  }
-
-  Future<void> _initializeNotifications() async {
-    await Future.delayed(const Duration(seconds: 3));
-    final enabled = await _notificationService.checkPermissions();
-    if (mounted) {
-      setState(() {
-        _notificationsEnabled = enabled;
-        _showNotificationBanner =
-            !enabled; // Solo mostrar si no están habilitadas
-      });
-    }
   }
 
   @override
@@ -102,6 +96,7 @@ class _HomePageState extends State<HomePage> {
     _imageRotationTimer?.cancel();
     _weatherUpdateTimer?.cancel();
     _pageController.dispose();
+    _pulseController.dispose();
     for (var sub in _streamSubscriptions) {
       sub.cancel();
     }
@@ -487,40 +482,6 @@ class _HomePageState extends State<HomePage> {
       }[month] ??
       '';
 
-  // Método para activar notificaciones
-  Future<void> _enableNotifications() async {
-    final enabled = await _notificationService.requestPermissions();
-
-    if (mounted) {
-      setState(() {
-        _notificationsEnabled = enabled;
-        _showNotificationBanner = false;
-      });
-
-      if (enabled) {
-        // Mostrar mensaje de éxito
-        FloatingNotification.show(
-          context,
-          message:
-              '¡Notificaciones activadas! Te avisaremos sobre cambios importantes.',
-          type: NotificationType.success,
-          duration: const Duration(seconds: 3),
-        );
-
-        // Enviar notificación de prueba
-        await _notificationService.sendTestNotification();
-      } else {
-        FloatingNotification.show(
-          context,
-          message:
-              'No se pudieron activar las notificaciones. Verifica los permisos de tu navegador.',
-          type: NotificationType.error,
-          duration: const Duration(seconds: 4),
-        );
-      }
-    }
-  }
-
   // --- WIDGETS DE LA PÁGINA DE INICIO ---
 
   @override
@@ -552,6 +513,38 @@ class _HomePageState extends State<HomePage> {
                     MyApp.primaryNavy.withOpacity(0.9),
                   ],
                   stops: const [0.0, 0.4, 1.0],
+                ),
+              ),
+            ),
+
+            // 2b. Indicadores de página del carrusel
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: IgnorePointer(
+                child: Center(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(_panelImages.length, (i) {
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 3,
+                          vertical: 10,
+                        ),
+                        width: _currentPage == i ? 20 : 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color:
+                              _currentPage == i
+                                  ? MyApp.primaryOrange
+                                  : Colors.white.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      );
+                    }),
+                  ),
                 ),
               ),
             ),
@@ -588,76 +581,98 @@ class _HomePageState extends State<HomePage> {
 
                                         const SizedBox(height: 5),
 
-                                        // Botón de Horarios con texto responsive
-                                        ElevatedButton(
-                                          onPressed: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder:
-                                                    (context) => SchedulesPage(
-                                                      firestore: _firestore,
-                                                      holidays: _holidays,
-                                                      nextAysenDeparture:
-                                                          _nextAysenDeparture,
-                                                      nextCoyhaiqueDeparture:
-                                                          _nextCoyhaiqueDeparture,
-                                                      currentDayCollection:
-                                                          _currentDayCollection,
-                                                    ),
-                                              ),
-                                            );
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.black,
-                                            foregroundColor:
-                                                MyApp.primaryOrange,
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 16,
-                                              horizontal: 20,
-                                            ),
-                                            minimumSize: const Size(
-                                              double.infinity,
-                                              60,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            elevation: 3,
-                                            shadowColor: MyApp.primaryOrange
-                                                .withOpacity(0.4),
-                                          ),
-                                          child: FittedBox(
-                                            fit: BoxFit.scaleDown,
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Image.asset(
-                                                  'assets/icons/bus_reloj.png',
-                                                  width: 28,
-                                                  height: 28,
-                                                  fit: BoxFit.contain,
-                                                ),
-                                                const SizedBox(width: 14),
-                                                const Text(
-                                                  'TODOS LOS HORARIOS',
-                                                  style: TextStyle(
-                                                    fontSize: 20,
-                                                    fontWeight: FontWeight.bold,
+                                        // Botón de Horarios - pill con gradiente
+                                        AnimatedBuilder(
+                                          animation: _pulseAnim,
+                                          builder:
+                                              (context, child) =>
+                                                  Transform.scale(
+                                                    scale: _pulseAnim.value,
+                                                    child: child,
                                                   ),
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder:
+                                                      (
+                                                        context,
+                                                      ) => SchedulesPage(
+                                                        firestore: _firestore,
+                                                        holidays: _holidays,
+                                                        nextAysenDeparture:
+                                                            _nextAysenDeparture,
+                                                        nextCoyhaiqueDeparture:
+                                                            _nextCoyhaiqueDeparture,
+                                                        currentDayCollection:
+                                                            _currentDayCollection,
+                                                      ),
                                                 ),
-                                                const SizedBox(width: 12),
-                                                const Icon(
-                                                  Icons.touch_app_rounded,
-                                                  size: 28,
+                                              );
+                                            },
+                                            child: Container(
+                                              width: double.infinity,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 18,
+                                                    horizontal: 20,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.black,
+                                                borderRadius:
+                                                    BorderRadius.circular(50),
+                                                border: Border.all(
+                                                  color: MyApp.primaryOrange,
+                                                  width: 3,
                                                 ),
-                                              ],
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: MyApp.primaryOrange
+                                                        .withValues(alpha: 0.4),
+                                                    blurRadius: 14,
+                                                    offset: const Offset(0, 5),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Image.asset(
+                                                      'assets/icons/bus_reloj.png',
+                                                      width: 28,
+                                                      height: 28,
+                                                      fit: BoxFit.contain,
+                                                    ),
+                                                    const SizedBox(width: 14),
+                                                    const Text(
+                                                      'TODOS LOS HORARIOS',
+                                                      style: TextStyle(
+                                                        fontSize: 20,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Colors.white,
+                                                        letterSpacing: 1.2,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 12),
+                                                    const Icon(
+                                                      Icons
+                                                          .arrow_forward_rounded,
+                                                      color: Colors.white,
+                                                      size: 26,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                        ),
+                                        ), // cierre AnimatedBuilder
                                       ],
                                     ),
                                   ),
@@ -708,6 +723,7 @@ class _HomePageState extends State<HomePage> {
                     context,
                     MaterialPageRoute(builder: (_) => const ContactPage()),
                   ),
+                  icon: Icons.location_on_rounded,
                 ),
                 const SizedBox(width: 10),
                 _buildHeroNavButton(
@@ -716,6 +732,7 @@ class _HomePageState extends State<HomePage> {
                     context,
                     MaterialPageRoute(builder: (_) => const ParaderosPage()),
                   ),
+                  icon: Icons.map_rounded,
                 ),
               ],
             ),
@@ -738,6 +755,7 @@ class _HomePageState extends State<HomePage> {
                     context,
                     MaterialPageRoute(builder: (_) => const ContactPage()),
                   ),
+                  icon: Icons.location_on_rounded,
                 ),
                 const SizedBox(width: 10),
                 _buildHeroNavButton(
@@ -746,6 +764,7 @@ class _HomePageState extends State<HomePage> {
                     context,
                     MaterialPageRoute(builder: (_) => const ParaderosPage()),
                   ),
+                  icon: Icons.map_rounded,
                 ),
               ],
             ),
@@ -755,21 +774,57 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Widget _buildHeroNavButton(String text, VoidCallback onPressed) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
-        color: Colors.white.withOpacity(0.1),
-      ),
-      child: TextButton(
-        onPressed: onPressed,
-        style: TextButton.styleFrom(
-          foregroundColor: Colors.white,
-          textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  Widget _buildHeroNavButton(
+    String text,
+    VoidCallback onPressed, {
+    IconData? icon,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withValues(alpha: 0.22),
+              Colors.white.withValues(alpha: 0.08),
+            ],
+          ),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.45),
+            width: 1.5,
+          ),
         ),
-        child: Text(text),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onPressed,
+            splashColor: Colors.white.withValues(alpha: 0.15),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, color: Colors.white, size: 18),
+                    const SizedBox(width: 7),
+                  ],
+                  Text(
+                    text,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -896,7 +951,11 @@ class _HomePageState extends State<HomePage> {
                     ),
                   if (_nextAysenDeparture != null &&
                       _nextCoyhaiqueDeparture != null)
-                    const SizedBox(width: 12),
+                    const VerticalDivider(
+                      color: Colors.white24,
+                      width: 24,
+                      thickness: 1,
+                    ),
                   if (_nextCoyhaiqueDeparture != null)
                     Expanded(
                       child: _buildDepartureInfoColumn(
@@ -1036,7 +1095,11 @@ class _HomePageState extends State<HomePage> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: MyApp.primaryOrange,
+                color:
+                    dayPart == 'Hoy'
+                        ? MyApp
+                            .primaryOrange // naranja cuando es hoy
+                        : const Color(0xFF6A1B9A), // morado cuando es mañana
                 borderRadius: BorderRadius.circular(6),
               ),
               child:
@@ -1099,41 +1162,58 @@ class _HomePageState extends State<HomePage> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           if (dayPart.isNotEmpty) ...[
-                            Text(
-                              dayPart,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 3,
                               ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const Text(
-                              "a las",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
+                              decoration: BoxDecoration(
+                                color:
+                                    dayPart == 'Hoy'
+                                        ? const Color(0xFF1E88E5) // azul
+                                        : const Color(0xFFAB47BC), // lila
+                                borderRadius: BorderRadius.circular(20),
                               ),
-                              textAlign: TextAlign.center,
+                              child: Text(
+                                dayPart == 'Hoy' ? 'HOY' : 'MAÑANA',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  letterSpacing: 0.8,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
+                            const SizedBox(height: 4),
                           ],
+                          if (dayPart.isNotEmpty)
+                            Text(
+                              'a las',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.75),
+                                fontWeight: FontWeight.w500,
+                                fontSize: 13,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
                           Text(
                             hourPart,
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
-                              fontSize: 18,
+                              fontSize: 34,
+                              letterSpacing: -0.5,
                             ),
                             textAlign: TextAlign.center,
                           ),
                           if (suffixPart.isNotEmpty)
                             Text(
                               suffixPart,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.8),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -1142,54 +1222,32 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           const SizedBox(height: 12),
-          // Widget del clima
+          // Chip de clima compacto
           if (weather != null && weather.hasData)
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.white.withOpacity(0.2)),
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
               ),
-              child: Column(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    'Ahora:',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    textAlign: TextAlign.center,
+                  Icon(
+                    _getCupertinoWeatherIcon(weather.weatherText),
+                    color: Colors.white,
+                    size: 18,
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        _getCupertinoWeatherIcon(weather.weatherText),
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        weather.temperature,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
+                  const SizedBox(width: 6),
                   Text(
-                    weather.weatherText,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 12,
+                    weather.temperature,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
                     ),
-                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
@@ -1230,12 +1288,16 @@ class _HomePageState extends State<HomePage> {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFFD4CFC4), // Color beige/gris del diseño
+        color: const Color(0xFFD4CFC4),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
+            color: Colors.black.withOpacity(0.25),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
           ),
         ],
       ),
@@ -1360,114 +1422,6 @@ class _HomePageState extends State<HomePage> {
                   fontWeight: FontWeight.w400,
                 ),
                 textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Widget del banner de notificaciones (similar al de paraderos_page)
-  Widget _buildNotificationBanner() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [MyApp.primaryOrange, MyApp.primaryOrange.withOpacity(0.85)],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: MyApp.primaryOrange.withOpacity(0.4),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Ícono de notificación
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.25),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.notifications_active_rounded,
-              color: Colors.white,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 16),
-          // Texto
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Activa las notificaciones',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Te avisaremos sobre cambios en horarios',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Botón Activar
-                ElevatedButton(
-                  onPressed: _enableNotifications,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: MyApp.primaryOrange,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'Activar ahora',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Botón X para cerrar
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                _showNotificationBanner = false;
-              });
-            },
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(
-                Icons.close_rounded,
-                color: Colors.white,
-                size: 20,
               ),
             ),
           ),

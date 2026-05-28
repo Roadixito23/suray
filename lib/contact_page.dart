@@ -21,9 +21,15 @@ class _ContactPageState extends State<ContactPage>
   int _puertoAysenTabIndex = 0;
   int _coyhaiqueTabIndex = 0;
 
+  bool get _isDark => darkModeNotifier.value;
+  _CT get _t => _isDark ? _CT.dark : _CT.light;
+
+  void _onDarkModeChanged() => setState(() {});
+
   @override
   void initState() {
     super.initState();
+    darkModeNotifier.addListener(_onDarkModeChanged);
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
@@ -46,6 +52,7 @@ class _ContactPageState extends State<ContactPage>
 
   @override
   void dispose() {
+    darkModeNotifier.removeListener(_onDarkModeChanged);
     _animationController.dispose();
     super.dispose();
   }
@@ -127,11 +134,18 @@ class _ContactPageState extends State<ContactPage>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                MyApp.lightGreyBackground,
-                MyApp.surfaceWhite,
-                MyApp.primaryNavy.withOpacity(0.05),
-              ],
+              colors:
+                  _isDark
+                      ? const [
+                        Color(0xFF0A1628),
+                        Color(0xFF0D1B2E),
+                        Color(0xFF112240),
+                      ]
+                      : [
+                        MyApp.lightGreyBackground,
+                        MyApp.surfaceWhite,
+                        MyApp.primaryNavy.withOpacity(0.05),
+                      ],
               stops: const [0.0, 0.6, 1.0],
             ),
           ),
@@ -213,6 +227,32 @@ class _ContactPageState extends State<ContactPage>
                     ),
                   ),
                 ),
+                actions: [
+                  Container(
+                    margin: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        _isDark
+                            ? Icons.wb_sunny_rounded
+                            : Icons.dark_mode_rounded,
+                        color: Colors.white,
+                      ),
+                      onPressed: () {
+                        final newVal = !darkModeNotifier.value;
+                        darkModeNotifier.value = newVal;
+                        saveDarkMode(newVal);
+                      },
+                    ),
+                  ),
+                ],
                 leading: Container(
                   margin: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -460,71 +500,72 @@ class _ContactPageState extends State<ContactPage>
   }
 
   Widget _buildLocationSection() {
-    return Column(
-      children: [
-        // Puerto Aysén
-        _buildLocationCard(
-          city: 'Puerto Aysén',
-          locations: [
-            LocationInfo(
-              type: 'Oficina de venta de pasajes',
-              address: 'Eusebio Ibar 630',
-              phone: '672 336222',
-              icon: Icons.business_rounded,
-              mapUrl: 'https://maps.app.goo.gl/1nv7mAcGRpFVPMacA',
-            ),
-            LocationInfo(
-              type: 'Oficina de correspondencia',
-              address: 'Eusebio Ibar 630 (interior)',
-              phone: '672 336231',
-              icon: Icons.business_rounded,
-              mapUrl: 'https://maps.app.goo.gl/1nv7mAcGRpFVPMacA',
-            ),
-          ],
-          color: MyApp.primaryNavy,
-          delay: 300,
-          backgroundImage: 'assets/home_panels/aysen.png',
-          tabIndex: _puertoAysenTabIndex,
-          onTabChange: (index) {
-            setState(() {
-              _puertoAysenTabIndex = index;
-            });
-          },
+    final aysenCard = _buildLocationCard(
+      city: 'Puerto Aysén',
+      locations: [
+        LocationInfo(
+          type: 'Oficina de venta de pasajes',
+          address: 'Eusebio Ibar 630',
+          phone: '672 336222',
+          icon: Icons.business_rounded,
+          mapUrl: 'https://maps.app.goo.gl/1nv7mAcGRpFVPMacA',
         ),
-
-        const SizedBox(height: 20),
-
-        // Coyhaique
-        _buildLocationCard(
-          city: 'Coyhaique',
-          locations: [
-            LocationInfo(
-              type: 'Oficina de venta de pasajes',
-              address:
-                  'Av. Norte Sur/Las Violetas, Terminal de Coyhaique, Of. N°2',
-              phone: '672 212639',
-              icon: Icons.location_city_rounded,
-              mapUrl: 'https://maps.app.goo.gl/9AJMknQmkmf3tHSo8',
-            ),
-            LocationInfo(
-              type: 'Oficina de correspondencia',
-              address: 'Arturo Prat 265 (interior)',
-              phone: '672 234085',
-              icon: Icons.location_city_rounded,
-              mapUrl: 'https://maps.app.goo.gl/pMdzjb5y1Mg1iNQd9',
-            ),
-          ],
-          color: MyApp.accentBlue,
-          delay: 400,
-          backgroundImage: 'assets/home_panels/coyhaique.jpg',
-          tabIndex: _coyhaiqueTabIndex,
-          onTabChange: (index) {
-            setState(() {
-              _coyhaiqueTabIndex = index;
-            });
-          },
+        LocationInfo(
+          type: 'Oficina de correspondencia',
+          address: 'Eusebio Ibar 630 (interior)',
+          phone: '672 336231',
+          icon: Icons.business_rounded,
+          mapUrl: 'https://maps.app.goo.gl/1nv7mAcGRpFVPMacA',
         ),
       ],
+      color: MyApp.primaryNavy,
+      delay: 300,
+      backgroundImage: 'assets/home_panels/aysen.png',
+      tabIndex: _puertoAysenTabIndex,
+      onTabChange: (index) => setState(() => _puertoAysenTabIndex = index),
+    );
+
+    final coyhaiqueCard = _buildLocationCard(
+      city: 'Coyhaique',
+      locations: [
+        LocationInfo(
+          type: 'Oficina de venta de pasajes',
+          address: 'Av. Norte Sur/Las Violetas, Terminal de Coyhaique, Of. N°2',
+          phone: '672 212639',
+          icon: Icons.location_city_rounded,
+          mapUrl: 'https://maps.app.goo.gl/9AJMknQmkmf3tHSo8',
+        ),
+        LocationInfo(
+          type: 'Oficina de correspondencia',
+          address: 'Arturo Prat 265 (interior)',
+          phone: '672 234085',
+          icon: Icons.location_city_rounded,
+          mapUrl: 'https://maps.app.goo.gl/pMdzjb5y1Mg1iNQd9',
+        ),
+      ],
+      color: MyApp.accentBlue,
+      delay: 400,
+      backgroundImage: 'assets/home_panels/coyhaique.jpg',
+      tabIndex: _coyhaiqueTabIndex,
+      onTabChange: (index) => setState(() => _coyhaiqueTabIndex = index),
+    );
+
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
+    if (isLandscape) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: aysenCard),
+          const SizedBox(width: 16),
+          Expanded(child: coyhaiqueCard),
+        ],
+      );
+    }
+
+    return Column(
+      children: [aysenCard, const SizedBox(height: 20), coyhaiqueCard],
     );
   }
 
@@ -535,7 +576,7 @@ class _ContactPageState extends State<ContactPage>
         width: double.infinity,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: MyApp.surfaceWhite,
+          color: _t.cardBg,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -567,7 +608,7 @@ class _ContactPageState extends State<ContactPage>
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
+                color: _t.innerCard,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: MyApp.primaryOrange.withOpacity(0.1),
@@ -593,7 +634,10 @@ class _ContactPageState extends State<ContactPage>
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: MyApp.primaryOrange.withOpacity(0.1),
+                          color:
+                              _isDark
+                                  ? MyApp.primaryOrange.withOpacity(0.25)
+                                  : MyApp.primaryOrange.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: MyApp.primaryOrange.withOpacity(0.3),
@@ -610,7 +654,10 @@ class _ContactPageState extends State<ContactPage>
                                   context,
                                 ).textTheme.bodyMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
-                                  color: MyApp.primaryOrange,
+                                  color:
+                                      _isDark
+                                          ? Colors.white
+                                          : MyApp.primaryOrange,
                                 ),
                               ),
                             ),
@@ -618,7 +665,10 @@ class _ContactPageState extends State<ContactPage>
                             Icon(
                               Icons.touch_app_rounded,
                               size: 14,
-                              color: MyApp.primaryOrange.withOpacity(0.5),
+                              color:
+                                  _isDark
+                                      ? Colors.white38
+                                      : MyApp.primaryOrange.withOpacity(0.5),
                             ),
                           ],
                         ),
@@ -648,7 +698,7 @@ class _ContactPageState extends State<ContactPage>
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: MyApp.surfaceWhite,
+          color: _t.cardBg,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -679,7 +729,7 @@ class _ContactPageState extends State<ContactPage>
                   fontFamily: 'Hemiheads',
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: color,
+                  color: _isDark ? Colors.white : color,
                 ),
               ),
             ),
@@ -688,9 +738,18 @@ class _ContactPageState extends State<ContactPage>
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.05),
+                color:
+                    _isDark
+                        ? Colors.white.withOpacity(0.05)
+                        : color.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: color.withOpacity(0.1), width: 1),
+                border: Border.all(
+                  color:
+                      _isDark
+                          ? Colors.white.withOpacity(0.12)
+                          : color.withOpacity(0.1),
+                  width: 1,
+                ),
               ),
               child: Row(
                 children: [
@@ -754,6 +813,7 @@ class _ContactPageState extends State<ContactPage>
     required Color color,
     required VoidCallback onTap,
   }) {
+    final unselectedColor = _isDark ? Colors.white54 : color.withOpacity(0.6);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
@@ -769,7 +829,7 @@ class _ContactPageState extends State<ContactPage>
             Icon(
               icon,
               size: 18,
-              color: isSelected ? Colors.white : color.withOpacity(0.6),
+              color: isSelected ? Colors.white : unselectedColor,
             ),
             const SizedBox(width: 8),
             Text(
@@ -777,7 +837,7 @@ class _ContactPageState extends State<ContactPage>
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? Colors.white : color.withOpacity(0.6),
+                color: isSelected ? Colors.white : unselectedColor,
               ),
             ),
           ],
@@ -849,10 +909,14 @@ class _ContactPageState extends State<ContactPage>
     required Color color,
     required List<Map<String, dynamic>> schedules,
   }) {
+    final titleColor = _isDark ? Colors.white : color;
+    final headerBg = _isDark ? color.withOpacity(0.3) : color.withOpacity(0.15);
+    final headerText = _isDark ? Colors.white : color;
+    final dayText = _isDark ? Colors.white70 : color.withOpacity(0.9);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: _t.innerCard,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withOpacity(0.15), width: 1),
       ),
@@ -864,10 +928,15 @@ class _ContactPageState extends State<ContactPage>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color:
+                      _isDark ? color.withOpacity(0.3) : color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, size: 20, color: color),
+                child: Icon(
+                  icon,
+                  size: 20,
+                  color: _isDark ? Colors.white : color,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -876,7 +945,7 @@ class _ContactPageState extends State<ContactPage>
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: color,
+                    color: titleColor,
                   ),
                 ),
               ),
@@ -894,7 +963,7 @@ class _ContactPageState extends State<ContactPage>
                 // Encabezado de la tabla
                 Container(
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.15),
+                    color: headerBg,
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(6),
                       topRight: Radius.circular(6),
@@ -922,7 +991,7 @@ class _ContactPageState extends State<ContactPage>
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
-                              color: color,
+                              color: headerText,
                             ),
                           ),
                         ),
@@ -939,7 +1008,7 @@ class _ContactPageState extends State<ContactPage>
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
-                              color: color,
+                              color: headerText,
                             ),
                           ),
                         ),
@@ -963,7 +1032,7 @@ class _ContactPageState extends State<ContactPage>
                       ),
                       color:
                           isClosed
-                              ? Colors.red.withOpacity(0.05)
+                              ? Colors.red.withOpacity(_isDark ? 0.15 : 0.05)
                               : Colors.transparent,
                     ),
                     child: Row(
@@ -989,7 +1058,7 @@ class _ContactPageState extends State<ContactPage>
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: color.withOpacity(0.9),
+                                color: dayText,
                               ),
                             ),
                           ),
@@ -1018,6 +1087,7 @@ class _ContactPageState extends State<ContactPage>
   }
 
   Widget _buildHoursCell(String hours, bool isClosed, Color color) {
+    final hourColor = _isDark ? Colors.white70 : color.withOpacity(0.85);
     // Si contiene el separador "/", dividir en dos líneas
     if (hours.contains('/')) {
       final parts = hours.split('/').map((e) => e.trim()).toList();
@@ -1031,7 +1101,7 @@ class _ContactPageState extends State<ContactPage>
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: color.withOpacity(0.85),
+                  color: hourColor,
                   height: 1.4,
                 ),
               );
@@ -1045,17 +1115,21 @@ class _ContactPageState extends State<ContactPage>
       style: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w600,
-        color: isClosed ? Colors.red.withOpacity(0.8) : color.withOpacity(0.85),
+        color: isClosed ? Colors.red.withOpacity(0.8) : hourColor,
       ),
     );
   }
 
   Widget _buildLocationItem(LocationInfo info, Color color) {
+    final btnBg = _isDark ? color.withOpacity(0.25) : color.withOpacity(0.1);
+    final btnText = _isDark ? Colors.white : color;
+    final btnIcon = _isDark ? Colors.white38 : color.withOpacity(0.5);
+    final labelColor = _isDark ? Colors.white : color;
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: _t.innerCard,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withOpacity(0.1), width: 1),
       ),
@@ -1065,14 +1139,18 @@ class _ContactPageState extends State<ContactPage>
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(info.icon, color: color, size: 20),
+              Icon(
+                info.icon,
+                color: _isDark ? Colors.white70 : color,
+                size: 20,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   info.type,
                   style: Theme.of(
                     context,
-                  ).textTheme.labelLarge?.copyWith(color: color),
+                  ).textTheme.labelLarge?.copyWith(color: labelColor),
                 ),
               ),
             ],
@@ -1081,7 +1159,11 @@ class _ContactPageState extends State<ContactPage>
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(Icons.location_on_rounded, size: 20, color: color),
+              Icon(
+                Icons.location_on_rounded,
+                size: 20,
+                color: _isDark ? Colors.white70 : color,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: InkWell(
@@ -1093,7 +1175,7 @@ class _ContactPageState extends State<ContactPage>
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
+                      color: btnBg,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: color.withOpacity(0.3),
@@ -1110,16 +1192,12 @@ class _ContactPageState extends State<ContactPage>
                               context,
                             ).textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
-                              color: color,
+                              color: btnText,
                             ),
                           ),
                         ),
                         const SizedBox(width: 6),
-                        Icon(
-                          Icons.touch_app_rounded,
-                          size: 14,
-                          color: color.withOpacity(0.5),
-                        ),
+                        Icon(Icons.touch_app_rounded, size: 14, color: btnIcon),
                       ],
                     ),
                   ),
@@ -1131,7 +1209,11 @@ class _ContactPageState extends State<ContactPage>
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(Icons.phone_rounded, size: 20, color: color),
+              Icon(
+                Icons.phone_rounded,
+                size: 20,
+                color: _isDark ? Colors.white70 : color,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: InkWell(
@@ -1143,7 +1225,7 @@ class _ContactPageState extends State<ContactPage>
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
+                      color: btnBg,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: color.withOpacity(0.3),
@@ -1160,16 +1242,12 @@ class _ContactPageState extends State<ContactPage>
                               context,
                             ).textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
-                              color: color,
+                              color: btnText,
                             ),
                           ),
                         ),
                         const SizedBox(width: 6),
-                        Icon(
-                          Icons.touch_app_rounded,
-                          size: 14,
-                          color: color.withOpacity(0.5),
-                        ),
+                        Icon(Icons.touch_app_rounded, size: 14, color: btnIcon),
                       ],
                     ),
                   ),
@@ -1181,6 +1259,42 @@ class _ContactPageState extends State<ContactPage>
       ),
     );
   }
+}
+
+class _CT {
+  final Color bg;
+  final Color cardBg;
+  final Color innerCard;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color border;
+
+  const _CT({
+    required this.bg,
+    required this.cardBg,
+    required this.innerCard,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.border,
+  });
+
+  static const dark = _CT(
+    bg: Color(0xFF0A1628),
+    cardBg: Color(0xFF112240),
+    innerCard: Color(0xFF1A3050),
+    textPrimary: Color(0xFFFFFFFF),
+    textSecondary: Color(0xB3FFFFFF),
+    border: Color(0x1AFFFFFF),
+  );
+
+  static const light = _CT(
+    bg: Color(0xFFF5F7FA),
+    cardBg: Color(0xFFFFFFFF),
+    innerCard: Color(0xE6FFFFFF),
+    textPrimary: Color(0xFF1A2F4A),
+    textSecondary: Color(0xFF6B7C93),
+    border: Color(0x1A1A2F4A),
+  );
 }
 
 class LocationInfo {
